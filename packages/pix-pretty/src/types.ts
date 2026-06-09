@@ -1,0 +1,275 @@
+import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
+import type {
+	AgentToolResult,
+	AgentToolUpdateCallback,
+	BashToolInput,
+	EditToolInput,
+	ExtensionCommandContext,
+	ExtensionContext,
+	FindToolInput,
+	GrepToolInput,
+	LsToolInput,
+	ReadToolInput,
+	WriteToolInput,
+} from "@earendil-works/pi-coding-agent";
+import type { FileFinder } from "@ff-labs/fff-node";
+
+// We keep the original shiki-shaped types as plain string aliases so the
+// language map and function signatures stay 1:1 with upstream pi-pretty.
+export type BundledLanguage = string;
+
+export type BundledTheme = string;
+
+// ---------------------------------------------------------------------------
+// Multi-grep ripgrep fallback contracts
+// ---------------------------------------------------------------------------
+
+export type ConstraintParseResult =
+	| { ok: true; globs: string[]; tokens: string[] }
+	| { ok: false; error: string };
+
+export type MultiGrepRipgrepFallbackParams = {
+	cwd: string;
+	patterns: string[];
+	path?: string;
+	constraints?: string;
+	context?: number;
+	limit: number;
+	ignoreCase: boolean;
+	signal?: AbortSignal;
+};
+
+export type MultiGrepRipgrepFallbackResult = {
+	text: string;
+	matchCount: number;
+	limitReached: boolean;
+};
+
+export type MultiGrepRipgrepFallback = (
+	params: MultiGrepRipgrepFallbackParams,
+) => Promise<MultiGrepRipgrepFallbackResult>;
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+
+export type BgTheme = { getBgAnsi?: (key: string) => string };
+
+export type FgTheme = {
+	fg: (key: string, text: string) => string;
+	// Optional raw-ANSI accessor pi's theme exposes; used by the diff renderer
+	// to pull toolDiffAdded/Removed/Context colors. Absent on minimal themes.
+	getFgAnsi?: (key: string) => string;
+};
+
+export type ImageProtocol = "iterm2" | "kitty" | "none";
+
+export type ToolTextContent = TextContent;
+
+export type ToolImageContent = ImageContent;
+
+export type ToolContent = TextContent | ImageContent;
+
+export type ToolResultLike<TDetails = unknown> = AgentToolResult<
+	TDetails | undefined
+>;
+
+type TextComponentLike = {
+	setText(value: string): void;
+	getText?: () => string;
+};
+
+export type TextComponentCtor = new (
+	text?: string,
+	x?: number,
+	y?: number,
+) => TextComponentLike;
+
+export type ThemeLike = BgTheme & FgTheme & { bold: (text: string) => string };
+
+export type RenderContextLike<
+	TState extends Record<string, string | undefined> = Record<
+		string,
+		string | undefined
+	>,
+> = {
+	lastComponent?: TextComponentLike;
+	state: TState;
+	expanded: boolean;
+	isError: boolean;
+	invalidate: () => void;
+};
+
+type SessionContextLike = ExtensionContext;
+
+export type CommandContextLike = ExtensionCommandContext;
+
+type ToolExecutor<TParams, TDetails = unknown> = (
+	toolCallId: string,
+	params: TParams,
+	signal?: AbortSignal,
+	onUpdate?: AgentToolUpdateCallback<TDetails | undefined>,
+	ctx?: ExtensionContext,
+) => Promise<ToolResultLike<TDetails>>;
+
+export type ToolFactory<TParams, TDetails = unknown> = (cwd: string) => {
+	name?: string;
+	description?: string;
+	label?: string;
+	parameters?: unknown;
+	execute: ToolExecutor<TParams, TDetails>;
+};
+
+export type PiPrettySdk = {
+	createReadToolDefinition?: ToolFactory<ReadToolInput>;
+	createReadTool?: ToolFactory<ReadToolInput>;
+	createBashToolDefinition?: ToolFactory<BashToolInput>;
+	createBashTool?: ToolFactory<BashToolInput>;
+	createLsToolDefinition?: ToolFactory<LsToolInput>;
+	createLsTool?: ToolFactory<LsToolInput>;
+	createFindToolDefinition?: ToolFactory<FindToolInput>;
+	createFindTool?: ToolFactory<FindToolInput>;
+	createGrepToolDefinition?: ToolFactory<GrepToolInput>;
+	createGrepTool?: ToolFactory<GrepToolInput>;
+	createEditToolDefinition?: ToolFactory<EditToolInput>;
+	createEditTool?: ToolFactory<EditToolInput>;
+	createWriteToolDefinition?: ToolFactory<WriteToolInput>;
+	createWriteTool?: ToolFactory<WriteToolInput>;
+	getAgentDir?: () => string;
+};
+
+export type PiPrettyApi = {
+	registerTool: (tool: unknown) => void;
+	registerCommand: (
+		name: string,
+		command: {
+			description?: string;
+			handler: (args: string, ctx: CommandContextLike) => Promise<void> | void;
+		},
+	) => void;
+	on: (
+		event: string,
+		handler: (event: unknown, ctx: SessionContextLike) => Promise<void> | void,
+	) => void;
+};
+
+export type OptionalFffModule = { FileFinder: typeof FileFinder };
+
+export type FffBackedFinder = FileFinder;
+
+export type ReadParams = ReadToolInput;
+
+export type BashParams = BashToolInput;
+
+export type EditParams = EditToolInput;
+
+export type WriteParams = WriteToolInput;
+
+// A single old→new replacement extracted from an edit tool call (supports both
+// the single oldText/newText shape and the batched `edits[]` shape).
+export type EditOperation = { oldText: string; newText: string };
+
+export type LsParams = LsToolInput;
+
+export type FindParams = FindToolInput;
+
+export type GrepParams = GrepToolInput;
+
+export type MultiGrepParams = {
+	patterns: string[];
+	path?: string;
+	constraints?: string;
+	context?: number;
+	limit?: number;
+};
+
+export type GrepRenderState = { _gk?: string; _gt?: string };
+
+export type EditRenderState = { _pk?: string; _pt?: string };
+
+export type WriteRenderState = {
+	_previewKey?: string;
+	_previewText?: string;
+	_wdk?: string;
+	_wdt?: string;
+	_nfk?: string;
+	_nft?: string;
+};
+
+export type MultiGrepRenderState = { _mgk?: string; _mgt?: string };
+
+export type FindResultDetails = {
+	_type: "findResult";
+	text: string;
+	pattern: string;
+	matchCount: number;
+};
+
+export type GrepResultDetails = {
+	_type: "grepResult";
+	text: string;
+	pattern: string;
+	matchCount: number;
+};
+
+export type RenderDetails =
+	| { _type: "readImage"; filePath: string; data: string; mimeType: string }
+	| {
+			_type: "readFile";
+			filePath: string;
+			content: string;
+			offset: number;
+			lineCount: number;
+	  }
+	| {
+			_type: "bashResult";
+			text: string;
+			exitCode: number | null;
+			command: string;
+	  }
+	| { _type: "lsResult"; text: string; path: string; entryCount: number }
+	| FindResultDetails
+	| GrepResultDetails
+	| EditInfoDetails
+	| MultiEditInfoDetails
+	| WriteDiffDetails
+	| WriteNewDetails
+	| WriteNoChangeDetails;
+
+// --- edit/write render detail payloads (stored on result.details) ---
+export type EditInfoDetails = {
+	_type: "editInfo";
+	summary: string;
+	editLine: number;
+};
+
+export type MultiEditInfoDetails = {
+	_type: "multiEditInfo";
+	summary: string;
+	editCount: number;
+	diffLineCount: number;
+};
+
+export type WriteDiffDetails = {
+	_type: "diff";
+	summary: string;
+	oldContent: string;
+	newContent: string;
+	language: string | undefined;
+};
+
+export type WriteNewDetails = {
+	_type: "new";
+	lines: number;
+	content: string;
+	filePath: string;
+};
+
+export type WriteNoChangeDetails = { _type: "noChange" };
+
+export interface PiPrettyDeps {
+	sdk: PiPrettySdk;
+	TextComponent: TextComponentCtor;
+	fffModule?: OptionalFffModule;
+	multiGrepRipgrepFallback?: MultiGrepRipgrepFallback;
+}
