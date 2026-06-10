@@ -1,37 +1,38 @@
 /**
- * Render leaked reasoning tags as styled, visually distinct blocks.
+ * Convert leaked reasoning tags into native `thinking` content blocks.
  *
  * Some openai-compatible providers leak raw <think>/<thinking> tags into the
  * visible assistant `content[].text` (the real reasoning travels the proper
- * `reasoning_content` channel). Instead of stripping them, we render them
- * with clear visual styling so they're useful for debugging but don't
- * interfere with the actual response.
+ * `reasoning_content` channel). Instead of stripping or restyling them, we
+ * split each affected text block into ordered `text` + `thinking` content
+ * blocks. Pi renders `thinking` blocks dim + italic via the `thinkingText`
+ * theme token natively (see assistant-message.ts) — no ANSI injection, no
+ * markdown blockquote shim.
  *
  * Approach:
- *   - During streaming (`message_update`), re-render the event's message so
- *     reasoning blocks appear as styled blockquotes the moment the open tag
- *     streams in — no waiting for the close tag. The dangling-open-block
- *     handling in renderThinking() covers the not-yet-closed case, and a
- *     trailing half-streamed tag (e.g. "<thin") is stripped so it never
+ *   - During streaming (`message_update`), rebuild the event's message so a
+ *     reasoning block appears the moment the open tag streams in — no waiting
+ *     for the close tag. splitThinking() captures the dangling-open case, and
+ *     a trailing half-streamed tag (e.g. "<thin") is stripped so it never
  *     flashes as literal text.
  *
  *     Safety: `event.message` is a per-event shallow copy, but its content
  *     blocks are the provider's LIVE accumulating objects (providers do
  *     `block.text += delta`). We therefore never mutate text blocks in
  *     place — we replace `message.content` with fresh block objects. The
- *     TUI receives the same event object after extensions run, so the
- *     restyled content is what gets rendered live.
+ *     TUI receives the same event object after extensions run, so the rebuilt
+ *     content is what gets rendered live.
  *
- *   - On `message_end`, extract and reformat every reasoning block with
- *     visual markers, then return the styled message via the supported
- *     replacement channel. (The finalized message comes from
- *     `response.result()` — a fresh object that never saw the streaming
- *     restyling — so this step is still required for persistence.)
+ *   - On `message_end`, split every affected text block and return the
+ *     replacement via the supported channel. (The finalized message comes
+ *     from `response.result()` — a fresh object that never saw the streaming
+ *     rebuild — so this step is still required for persistence.)
  *
- * `content[].text` is MARKDOWN rendered by pi's TUI Markdown component.
- * The TUI does NOT parse HTML — <details>/<summary> would render as literal
- * junk text. We use a Markdown BLOCKQUOTE instead, which the TUI renders
- * natively via the `mdQuote`/`mdQuoteBorder` theme tokens.
+ * Persistence trade-off: the replacement is persisted and round-trips to the
+ * provider next turn. The synthesized `thinking` blocks carry no
+ * thinkingSignature (none was received — the reasoning leaked into the text
+ * channel), so signature-validating APIs (e.g. Anthropic) may reject or drop
+ * them on multi-turn. Accepted in exchange for native dim+italic rendering.
  *
  * To add a new tag variant, append to TAG_NAMES below.
  */
@@ -53,7 +54,11 @@ interface TextBlock {
 	type: "text";
 	text: string;
 }
-type Block = TextBlock | { type: string; [k: string]: unknown };
+interface ThinkingBlock {
+	type: "thinking";
+	thinking: string;
+}
+type Block = TextBlock | ThinkingBlock | { type: string; [k: string]: unknown };
 interface Msg {
 	role?: string;
 	content?: Block[];
@@ -73,41 +78,80 @@ function stripPartialTailTag(text: string): string {
 	return text;
 }
 
-// Render a reasoning body as a markdown blockquote.
-function asQuote(body: string, _label: string): string {
-	const lines = body.split("\n");
-	const quoted = lines.map((line) => `> ${line}`).join("\n");
-	return `\n\n${quoted}\n\n`;
+// Push a text block only when it has visible content. Surrounding whitespace
+// between reasoning and answer text is dropped so the native renderer doesn't
+// emit stray blank paragraphs.
+// True when the text contains any reasoning tag (open, close, or orphan).
+function hasReasoningTag(text: string): boolean {
+	ORPHAN_TAG_RE.lastIndex = 0;
+	return ORPHAN_TAG_RE.test(text);
 }
 
-function renderThinking(text: string): string {
-	// Replace closed blocks with a clearly-marked blockquote
-	text = text.replace(CLOSED_BLOCK_RE, (_match, _tag, content) => {
-		const trimmed = content.trim();
-		if (!trimmed) return "";
-		return asQuote(trimmed, "⚙ Reasoning");
-	});
+function pushText(blocks: Block[], text: string): void {
+	const trimmed = text.trim();
+	if (trimmed) blocks.push({ type: "text", text: trimmed });
+}
 
-	// Replace dangling open blocks (stream cut off before close tag)
-	text = text.replace(OPEN_TAIL_RE, (_match, _tag, content) => {
-		const trimmed = content.trim();
-		if (!trimmed) return "";
-		return asQuote(trimmed, "⚙ Reasoning (incomplete)");
-	});
+function pushThinking(blocks: Block[], thinking: string): void {
+	const trimmed = thinking.trim();
+	if (trimmed) blocks.push({ type: "thinking", thinking: trimmed });
+}
 
-	// Clean up any orphan tags
-	text = text.replace(ORPHAN_TAG_RE, "");
+/**
+ * Split leaked reasoning text into ordered native content blocks.
+ *
+ * Reasoning spans (`<think>…</think>`, plus a trailing unclosed `<think>…`)
+ * become real `thinking` blocks, which pi renders dim + italic via the
+ * `thinkingText` theme token — no ANSI injection, no markdown blockquote.
+ * Everything else stays a `text` block. Returns the original single text
+ * block unchanged when no reasoning tags are present.
+ */
+function splitThinking(text: string): Block[] {
+	if (!hasReasoningTag(text)) {
+		return [{ type: "text", text }];
+	}
 
-	// Clean up excessive newlines
-	return text.replace(/\n{4,}/g, "\n\n\n").replace(/^\s+/, "");
+	const blocks: Block[] = [];
+	let rest = text;
+
+	// Consume closed reasoning blocks left-to-right, preserving order with the
+	// surrounding answer text.
+	CLOSED_BLOCK_RE.lastIndex = 0;
+	let match = CLOSED_BLOCK_RE.exec(rest);
+	while (match) {
+		pushText(blocks, rest.slice(0, match.index));
+		pushThinking(blocks, match[2]);
+		rest = rest.slice(match.index + match[0].length);
+		CLOSED_BLOCK_RE.lastIndex = 0;
+		match = CLOSED_BLOCK_RE.exec(rest);
+	}
+
+	// A dangling open block (close tag not yet streamed / never emitted): the
+	// remainder after the open tag is reasoning.
+	const openMatch = OPEN_TAIL_RE.exec(rest);
+	if (openMatch) {
+		// Leading text may still carry orphan tags (e.g. a stray `</think>`).
+		pushText(
+			blocks,
+			openMatch.input.slice(0, openMatch.index).replace(ORPHAN_TAG_RE, ""),
+		);
+		pushThinking(blocks, openMatch[2].replace(ORPHAN_TAG_RE, ""));
+	} else {
+		// Strip any orphan tags from the trailing text.
+		pushText(blocks, rest.replace(ORPHAN_TAG_RE, ""));
+	}
+
+	// All-empty (e.g. `<think></think>`) collapses to a single empty text block
+	// so the message never becomes contentless.
+	return blocks.length > 0 ? blocks : [{ type: "text", text: "" }];
 }
 
 // Export for testing
-export { renderThinking, stripPartialTailTag };
+export { splitThinking, stripPartialTailTag };
 
 export default function thinkingExtension(pi: ExtensionAPI) {
-	// Live styling during streaming: restyle the event's message so reasoning
-	// renders as soon as the open tag appears, token by token.
+	// Live conversion during streaming: rebuild the event's message so a native
+	// thinking block appears as soon as the open tag streams in, token by token.
 	pi.on("message_update", (event) => {
 		const ev = event as {
 			message?: Msg;
@@ -121,19 +165,16 @@ export default function thinkingExtension(pi: ExtensionAPI) {
 		const streamType = ev.assistantMessageEvent?.type;
 		if (streamType && !streamType.startsWith("text_")) return;
 
-		msg.content = msg.content.map((block) => {
-			if (block.type !== "text") return block;
+		msg.content = msg.content.flatMap((block): Block[] => {
+			if (block.type !== "text") return [block];
 			const tb = block as TextBlock;
-			if (typeof tb.text !== "string" || !tb.text.includes("<")) return block;
+			if (typeof tb.text !== "string" || !tb.text.includes("<")) return [block];
+			// Strip a half-streamed tag so it never flashes as literal text.
 			const stripped = stripPartialTailTag(tb.text);
-			const lower = stripped.toLowerCase();
-			const hasTag = TAG_NAMES.some((t) => lower.includes(`<${t}`));
 			// Nothing reasoning-related: leave unrelated "<" text alone entirely.
-			if (!hasTag && stripped === tb.text) return block;
-			const rendered = hasTag ? renderThinking(stripped) : stripped;
-			if (rendered === tb.text) return block;
-			// New object — never mutate the provider's accumulating block.
-			return { ...block, text: rendered };
+			if (!hasReasoningTag(stripped) && stripped === tb.text) return [block];
+			// New objects — never mutate the provider's accumulating block.
+			return splitThinking(stripped);
 		});
 	});
 
@@ -142,19 +183,25 @@ export default function thinkingExtension(pi: ExtensionAPI) {
 		if (msg?.role !== "assistant" || !Array.isArray(msg.content)) return;
 
 		let changed = false;
-		for (const block of msg.content) {
-			if (block.type !== "text") continue;
+		const content = msg.content.flatMap((block): Block[] => {
+			if (block.type !== "text") return [block];
 			const tb = block as TextBlock;
-			if (typeof tb.text !== "string") continue;
-			if (!TAG_NAMES.some((t) => tb.text.includes(`<${t}`))) continue;
-			const rendered = renderThinking(tb.text);
-			if (rendered !== tb.text) {
-				tb.text = rendered;
-				changed = true;
-			}
-		}
+			if (typeof tb.text !== "string") return [block];
+			if (!hasReasoningTag(tb.text)) return [block];
+			changed = true;
+			return splitThinking(tb.text);
+		});
 
-		// Return the replacement so the styled message is what gets persisted.
-		if (changed) return { message: msg as unknown as never };
+		// Return the replacement so the native thinking blocks are persisted.
+		// Persistence note: this rewrites leaked reasoning from `text` into real
+		// `thinking` content blocks, which round-trip to the provider next turn.
+		// The blocks carry no thinkingSignature (we never received one — the
+		// reasoning leaked into the text channel), so signature-validating APIs
+		// may reject or drop them on multi-turn. Accepted trade-off for native
+		// dim+italic rendering via the `thinkingText` theme token.
+		if (changed) {
+			msg.content = content;
+			return { message: msg as unknown as never };
+		}
 	});
 }
