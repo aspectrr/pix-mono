@@ -11,6 +11,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { routerBaseUrl } from "./data.js";
+import { makeRenderCall, makeRenderResult } from "./render.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -119,6 +120,8 @@ export default function registerFetch(pi: ExtensionAPI): void {
 			"Set max_characters to cap response size (default 1000, 0 = unlimited). Use 5000-10000 for typical pages.",
 			"Always prefer fetch over raw curl/browser for reading page content.",
 		],
+		renderCall: makeRenderCall("fetch", (args) => String(args.url ?? "")),
+		renderResult: makeRenderResult(),
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch" }),
 			format: StringEnum(["markdown", "text", "html"] as const, {

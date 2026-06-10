@@ -11,6 +11,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { routerBaseUrl } from "./data.js";
+import { makeRenderCall, makeRenderResult } from "./render.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -136,6 +137,8 @@ export default function registerSearch(pi: ExtensionAPI): void {
 			"Set search_type='web' for general web results, search_type='news' for recent news articles.",
 			"Always prefer search over raw curl/browser requests for information lookup.",
 		],
+		renderCall: makeRenderCall("search", (args) => String(args.query ?? "")),
+		renderResult: makeRenderResult(),
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
 			search_type: StringEnum(["web", "news"] as const, {
