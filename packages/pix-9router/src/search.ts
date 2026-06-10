@@ -76,6 +76,53 @@ function curl(args: string[], stdin?: string): Promise<string> {
 	});
 }
 
+interface SearchResultItem {
+	title?: string | null;
+	url?: string | null;
+	snippet?: string | null;
+	published_at?: string | null;
+	metadata?: { author?: string | null } | null;
+	author?: string | null;
+}
+
+/**
+ * Format a raw exa search response as a compact markdown list.
+ * Falls back to pretty-printed JSON when the shape is unexpected.
+ */
+export function formatSearchResults(raw: string): string {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		return raw.slice(0, 20_000);
+	}
+
+	const obj = parsed as Record<string, unknown>;
+	const results = obj?.results;
+	if (!Array.isArray(results)) {
+		return JSON.stringify(parsed, null, 2).slice(0, 20_000);
+	}
+
+	if (results.length === 0) return "No results.";
+
+	const lines: string[] = [];
+	results.forEach((r: SearchResultItem, i: number) => {
+		const title = (r.title ?? "").trim() || r.url || "(untitled)";
+		lines.push(`${i + 1}. ${title}`);
+		if (r.url) lines.push(`   ${r.url}`);
+		const meta: string[] = [];
+		const author = r.author ?? r.metadata?.author;
+		if (author) meta.push(author);
+		if (r.published_at) meta.push(r.published_at.slice(0, 10));
+		if (meta.length > 0) lines.push(`   (${meta.join(" — ")})`);
+		const snippet = (r.snippet ?? "").trim();
+		if (snippet) lines.push(`   ${snippet.replace(/\s+/g, " ").slice(0, 300)}`);
+		lines.push("");
+	});
+
+	return lines.join("\n").trim().slice(0, 20_000);
+}
+
 export default function registerSearch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "search",
@@ -129,18 +176,11 @@ export default function registerSearch(pi: ExtensionAPI): void {
 					signal,
 				);
 
-				let parsed: unknown;
-				try {
-					parsed = JSON.parse(raw);
-				} catch {
-					parsed = raw;
-				}
-
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(parsed, null, 2).slice(0, 20_000),
+							text: formatSearchResults(raw),
 						},
 					],
 					details: { source: "api" },
@@ -176,18 +216,11 @@ export default function registerSearch(pi: ExtensionAPI): void {
 					`${routerBaseUrl()}/search`,
 				]);
 
-				let parsed: unknown;
-				try {
-					parsed = JSON.parse(raw);
-				} catch {
-					parsed = raw;
-				}
-
 				return {
 					content: [
 						{
 							type: "text",
-							text: `[FALLBACK — curl] API called via curl instead of fetch.\n\n${JSON.stringify(parsed, null, 2).slice(0, 19_500)}`,
+							text: `[FALLBACK — curl] API called via curl instead of fetch.\n\n${formatSearchResults(raw).slice(0, 19_500)}`,
 						},
 					],
 					details: { source: "curl-fallback" },

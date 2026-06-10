@@ -72,6 +72,39 @@ function curl(args: string[]): Promise<string> {
 	});
 }
 
+/**
+ * Extract readable page content from the exa fetch JSON envelope.
+ * Shape: { provider, url, title, content: { format, text }, ... }
+ * Falls back to the raw string when it isn't the expected JSON shape.
+ */
+export function formatFetchResult(raw: string): string {
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		return raw;
+	}
+	if (typeof parsed !== "object" || parsed === null) return raw;
+
+	const obj = parsed as {
+		title?: string | null;
+		url?: string | null;
+		content?: { text?: string | null } | string | null;
+	};
+
+	const text =
+		typeof obj.content === "string"
+			? obj.content
+			: (obj.content?.text ?? undefined);
+	if (typeof text !== "string") return raw;
+
+	const header: string[] = [];
+	if (obj.title) header.push(`# ${obj.title}`);
+	if (obj.url) header.push(`URL: ${obj.url}`);
+
+	return header.length > 0 ? `${header.join("\n")}\n\n${text}` : text;
+}
+
 export default function registerFetch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "fetch",
@@ -123,17 +156,18 @@ export default function registerFetch(pi: ExtensionAPI): void {
 					signal,
 				);
 
+				const formatted = formatFetchResult(raw);
 				const truncated =
-					maxChars > 0 && raw.length > maxChars
-						? `${raw.slice(0, maxChars)}\n\n[truncated]`
-						: raw;
+					maxChars > 0 && formatted.length > maxChars
+						? `${formatted.slice(0, maxChars)}\n\n[truncated]`
+						: formatted;
 
 				return {
 					content: [{ type: "text", text: truncated.slice(0, 20_000) }],
 					details: {
 						source: "api",
-						chars: raw.length,
-						truncated: maxChars > 0 && raw.length > maxChars,
+						chars: formatted.length,
+						truncated: maxChars > 0 && formatted.length > maxChars,
 					},
 				};
 			} catch (apiErr: unknown) {
