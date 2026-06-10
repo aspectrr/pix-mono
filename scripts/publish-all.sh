@@ -7,8 +7,17 @@
 # published at their current version. This makes a "publish all" run safe and
 # idempotent: only packages bumped since the last release actually publish.
 #
-# Requires: NODE_AUTH_TOKEN (or a configured ~/.npmrc) for authentication.
+# Authentication: in CI this relies on npm trusted publishing (OIDC) — no
+# token needed. The npm CLI auto-detects the OIDC environment. When OIDC is
+# present we also attach a provenance statement.
 set -euo pipefail
+
+# Attach provenance only when running under a CI OIDC environment (trusted
+# publishing). Locally this stays empty so `npm publish` works token-based.
+publish_flags="--access public"
+if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+	publish_flags="$publish_flags --provenance"
+fi
 
 published=0
 skipped=0
@@ -37,7 +46,8 @@ for dir in packages/*/; do
 	fi
 
 	echo "→ publishing ${name}@${version}"
-	if (cd "$dir" && npm publish --access public); then
+	# shellcheck disable=SC2086 # intentional word splitting of publish_flags
+	if (cd "$dir" && npm publish $publish_flags); then
 		published=$((published + 1))
 	else
 		echo "✖ failed to publish ${name}@${version}"

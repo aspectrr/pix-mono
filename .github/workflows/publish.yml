@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Required for npm trusted publishing (OIDC) + provenance.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -21,8 +23,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # Trusted publishing needs Node >= 22.14.0.
+          node-version: "22.14.0"
           registry-url: "https://registry.npmjs.org"
+
+      # Trusted publishing needs npm CLI >= 11.5.1; the bundled npm on Node 22
+      # is older, so upgrade it explicitly.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -38,7 +46,7 @@ jobs:
         run: bun test
 
       # Publishes every package whose version is not yet on npm (idempotent).
+      # Authentication is via OIDC trusted publishing (no NPM_TOKEN); provenance
+      # is attached automatically.
       - name: Publish changed packages to npm
         run: bun run publish:all
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
