@@ -10,6 +10,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -18,10 +19,15 @@ import { Type } from "typebox";
 
 // ─── Skill resolution ─────────────────────────────────────────────────────────
 
-/** Absolute path to this package's skills/ directory. */
+/** Absolute path to this package's bundled skills/ directory. */
 function skillsRoot(): string {
 	const here = fileURLToPath(new URL(".", import.meta.url));
 	return resolve(here, "..", "skills");
+}
+
+/** Absolute path to the user-level skills directory (~/.pi/agent/skills). */
+function userSkillsRoot(): string {
+	return join(homedir(), ".pi", "agent", "skills");
 }
 
 interface SkillEntry {
@@ -31,13 +37,12 @@ interface SkillEntry {
 }
 
 /**
- * Discover all skills from the package's skills/ directory.
+ * Scan a single skills root directory.
  * Supports two layouts:
  *   - flat:     skills/commit.md
  *   - subdir:   skills/commit/SKILL.md
  */
-function discoverSkills(): SkillEntry[] {
-	const root = skillsRoot();
+function scanSkillsDir(root: string): SkillEntry[] {
 	if (!existsSync(root)) return [];
 
 	const entries: SkillEntry[] = [];
@@ -56,7 +61,23 @@ function discoverSkills(): SkillEntry[] {
 		}
 	}
 
-	return entries.sort((a, b) => a.name.localeCompare(b.name));
+	return entries;
+}
+
+/**
+ * Discover all skills from bundled skills/ AND ~/.pi/agent/skills/.
+ * Bundled skills take precedence on name collision.
+ * Results sorted alphabetically by name.
+ */
+function discoverSkills(): SkillEntry[] {
+	const bundled = scanSkillsDir(skillsRoot());
+	const user = scanSkillsDir(userSkillsRoot());
+
+	// Merge: bundled wins on collision
+	const seen = new Set(bundled.map((s) => s.name));
+	const merged = [...bundled, ...user.filter((s) => !seen.has(s.name))];
+
+	return merged.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Extract the `description` from YAML frontmatter, or null. */
