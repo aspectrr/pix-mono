@@ -70,10 +70,18 @@ function extractDescription(content: string): string | null {
 // ─── Tool registration ────────────────────────────────────────────────────────
 
 const ParamsSchema = Type.Object({
-	name: Type.String({
-		description:
-			'Skill name to load, e.g. "commit", "debug". Use "list" to see all available skills.',
-	}),
+	name: Type.Optional(
+		Type.String({
+			description: 'Skill name, e.g. "commit", "debug". Omit to list all skills.',
+		}),
+	),
+	full: Type.Optional(
+		Type.Boolean({
+			default: false,
+			description:
+				"When true, return the full SKILL.md content. When false (default), return the description only.",
+		}),
+	),
 });
 
 export default function registerSkillLoader(pi: ExtensionAPI): void {
@@ -81,12 +89,13 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 		name: "read_skill",
 		label: "Read Skill",
 		description:
-			'Load the full instructions for a bundled skill by name. Pass name="list" to see all available skills with their descriptions. Use this to load a skill\'s procedure before executing it.',
-		promptSnippet: "Load a skill's full instructions by name",
+			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
+		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
-			'Call read_skill(name="list") to discover available skills and their descriptions.',
-			"Call read_skill(name=<skill>) to load the full procedure for a specific skill before executing it.",
-			"Prefer this over re-reading skill files with the read tool — it resolves the correct path regardless of install location.",
+			"Call read_skill() with no arguments to list all available skills and their descriptions.",
+			"Call read_skill(name=<skill>) to read the description of a specific skill before deciding to load it.",
+			"Call read_skill(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
+			"Prefer read_skill over the read tool for skills — it resolves the correct path regardless of install location.",
 		],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
@@ -102,9 +111,10 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 				isError: true,
 			});
 
-			const { name } = params as { name: string };
+			const { name, full } = params as { name?: string; full?: boolean };
 
-			if (!name || name === "list") {
+			// No name → list all skills
+			if (!name) {
 				const skills = discoverSkills();
 				if (!skills.length) return ok("No skills found.");
 
@@ -118,11 +128,10 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 					}
 				});
 
-				return ok(
-					`Available skills (${skills.length}):\n\n${lines.join("\n")}`,
-				);
+				return ok(`Available skills (${skills.length}):\n\n${lines.join("\n")}`);
 			}
 
+			// Resolve skill
 			const skills = discoverSkills();
 			const entry = skills.find(
 				(s) => s.name === name || s.name === name.replace(/\.md$/, ""),
@@ -130,13 +139,23 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 
 			if (!entry) {
 				const names = skills.map((s) => s.name).join(", ");
-				return fail(
-					`Skill "${name}" not found. Available: ${names || "(none)"}`,
-				);
+				return fail(`Skill "${name}" not found. Available: ${names || "(none)"}`);
 			}
 
 			try {
 				const content = readFileSync(entry.path, "utf-8");
+
+				// full=false (default) → description only
+				if (!full) {
+					const desc = extractDescription(content);
+					return ok(
+						desc
+							? `${entry.name}: ${desc}`
+							: `${entry.name}: (no description)`,
+					);
+				}
+
+				// full=true → entire file
 				return ok(content);
 			} catch (err) {
 				return fail(
@@ -148,9 +167,12 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 		},
 
 		renderCall(args, theme) {
-			const name = typeof args.name === "string" ? args.name : "?";
+			const { name, full } = args as { name?: string; full?: boolean };
+			const label = name
+				? `${name}${full ? " (full)" : ""}`
+				: "list";
 			return new Text(
-				`${theme.fg("toolTitle", theme.bold("read_skill"))} ${theme.fg("muted", name)}`,
+				`${theme.fg("toolTitle", theme.bold("read_skill"))} ${theme.fg("muted", label)}`,
 				0,
 				0,
 			);
