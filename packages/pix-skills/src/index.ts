@@ -72,7 +72,8 @@ function extractDescription(content: string): string | null {
 const ParamsSchema = Type.Object({
 	name: Type.Optional(
 		Type.String({
-			description: 'Skill name, e.g. "commit", "debug". Omit to list all skills.',
+			description:
+				'Skill name, e.g. "commit", "debug". Omit to list all skills.',
 		}),
 	),
 	full: Type.Optional(
@@ -128,7 +129,9 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 					}
 				});
 
-				return ok(`Available skills (${skills.length}):\n\n${lines.join("\n")}`);
+				return ok(
+					`Available skills (${skills.length}):\n\n${lines.join("\n")}`,
+				);
 			}
 
 			// Resolve skill
@@ -139,7 +142,9 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 
 			if (!entry) {
 				const names = skills.map((s) => s.name).join(", ");
-				return fail(`Skill "${name}" not found. Available: ${names || "(none)"}`);
+				return fail(
+					`Skill "${name}" not found. Available: ${names || "(none)"}`,
+				);
 			}
 
 			try {
@@ -149,9 +154,7 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 				if (!full) {
 					const desc = extractDescription(content);
 					return ok(
-						desc
-							? `${entry.name}: ${desc}`
-							: `${entry.name}: (no description)`,
+						desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`,
 					);
 				}
 
@@ -168,9 +171,7 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 
 		renderCall(args, theme) {
 			const { name, full } = args as { name?: string; full?: boolean };
-			const label = name
-				? `${name}${full ? " (full)" : ""}`
-				: "list";
+			const label = name ? `${name}${full ? " (full)" : ""}` : "list";
 			return new Text(
 				`${theme.fg("toolTitle", theme.bold("read_skill"))} ${theme.fg("muted", label)}`,
 				0,
