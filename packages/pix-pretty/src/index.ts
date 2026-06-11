@@ -1269,6 +1269,8 @@ export default function piPrettyExtension(
 			) {
 				const fp = params.path ?? params.file_path ?? "";
 				const operations = getEditOperations(params);
+				const fileLang = lang(fp);
+
 				// params is the live tool input (upstream EditToolInput shape); we
 				// type it loosely as EditParams for defensive legacy-field reads, so
 				// cast back to the upstream input when delegating to the real tool.
@@ -1283,6 +1285,7 @@ export default function piPrettyExtension(
 				if (operations.length === 0) return result;
 
 				const { diffs, summary } = summarizeEditOperations(operations);
+
 				if (operations.length === 1) {
 					let editLine = 0;
 					try {
@@ -1298,6 +1301,10 @@ export default function piPrettyExtension(
 						_type: "editInfo",
 						summary,
 						editLine,
+						oldContent: operations[0].oldText,
+						newContent: operations[0].newText,
+						language: fileLang,
+						filePath: fp,
 					});
 					return result;
 				}
@@ -1307,6 +1314,12 @@ export default function piPrettyExtension(
 					summary,
 					editCount: operations.length,
 					diffLineCount: diffs.reduce((sum, d) => sum + d.lines.length, 0),
+					ops: operations.map((op) => ({
+						oldContent: op.oldText,
+						newContent: op.newText,
+						language: fileLang,
+						filePath: fp,
+					})),
 				});
 				return result;
 			},
@@ -1353,24 +1366,68 @@ export default function piPrettyExtension(
 					return text;
 				}
 				const d = result.details as RenderDetails | undefined;
+
+				// Single edit — show full split diff
 				if (d?._type === "editInfo") {
-					const loc =
-						d.editLine > 0
-							? ` ${theme.fg("muted", `at line ${d.editLine}`)}`
-							: "";
-					text.setText(fillToolBackground(`  ${d.summary}${loc}`));
+					const key = `ed:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.oldContent.length}:${d.newContent.length}:${d.language ?? ""}`;
+					if (ctx.state._edk !== key) {
+						ctx.state._edk = key;
+						const loc =
+							d.editLine > 0
+								? ` ${theme.fg("muted", `at line ${d.editLine}`)}`
+								: "";
+						ctx.state._edt = `  ${d.summary}${loc}\n${theme.fg("muted", "  rendering diff…")}`;
+						const dc = resolveDiffColors(theme);
+						const diff = parseDiff(d.oldContent, d.newContent);
+						renderSplit(diff, d.language, MAX_RENDER_LINES, dc)
+							.then((rendered) => {
+								if (ctx.state._edk !== key) return;
+								const loc2 =
+									d.editLine > 0
+										? ` ${theme.fg("muted", `at line ${d.editLine}`)}`
+										: "";
+								ctx.state._edt = `  ${d.summary}${loc2}\n${rendered}`;
+								ctx.invalidate();
+							})
+							.catch(() => {
+								if (ctx.state._edk !== key) return;
+								ctx.state._edt = `  ${d.summary}`;
+								ctx.invalidate();
+							});
+					}
+					text.setText(ctx.state._edt ?? `  ${d.summary}`);
 					return text;
 				}
+
+				// Multiple edits — show each op as its own split diff, stacked
 				if (d?._type === "multiEditInfo") {
-					const extra =
-						typeof d.diffLineCount === "number"
-							? ` ${theme.fg("muted", `(${d.diffLineCount} diff lines)`)}`
-							: "";
-					text.setText(
-						fillToolBackground(`  ${d.editCount} edits ${d.summary}${extra}`),
-					);
+					const key = `med:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.editCount}:${d.diffLineCount}`;
+					if (ctx.state._edk !== key) {
+						ctx.state._edk = key;
+						ctx.state._edt = `  ${d.editCount} edits ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
+						const dc = resolveDiffColors(theme);
+						Promise.all(
+							d.ops.map((op) => {
+								const diff = parseDiff(op.oldContent, op.newContent);
+								return renderSplit(diff, op.language, MAX_RENDER_LINES, dc);
+							}),
+						)
+							.then((rendered) => {
+								if (ctx.state._edk !== key) return;
+								const body = rendered.join(`\n${theme.fg("muted", "  ···")}\n`);
+								ctx.state._edt = `  ${d.editCount} edits ${d.summary}\n${body}`;
+								ctx.invalidate();
+							})
+							.catch(() => {
+								if (ctx.state._edk !== key) return;
+								ctx.state._edt = `  ${d.editCount} edits ${d.summary}`;
+								ctx.invalidate();
+							});
+					}
+					text.setText(ctx.state._edt ?? `  ${d.editCount} edits ${d.summary}`);
 					return text;
 				}
+
 				const fallback = result.content?.[0];
 				const fallbackText =
 					fallback && isTextContent(fallback) ? fallback.text : "edited";

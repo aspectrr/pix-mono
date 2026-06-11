@@ -211,7 +211,12 @@ export type MultiGrepParams = {
 
 export type GrepRenderState = { _gk?: string; _gt?: string };
 
-export type EditRenderState = { _pk?: string; _pt?: string };
+export type EditRenderState = {
+	_pk?: string;
+	_pt?: string;
+	_edk?: string;
+	_edt?: string;
+};
 
 export type WriteRenderState = {
 	_previewKey?: string;
@@ -258,6 +263,7 @@ export type RenderDetails =
 	| GrepResultDetails
 	| EditInfoDetails
 	| MultiEditInfoDetails
+	| EditDiffDetails
 	| WriteDiffDetails
 	| WriteNewDetails
 	| WriteNoChangeDetails;
@@ -267,6 +273,11 @@ export type EditInfoDetails = {
 	_type: "editInfo";
 	summary: string;
 	editLine: number;
+	/** Full diff payload for split-view rendering */
+	oldContent: string;
+	newContent: string;
+	language: string | undefined;
+	filePath: string;
 };
 
 export type MultiEditInfoDetails = {
@@ -274,6 +285,13 @@ export type MultiEditInfoDetails = {
 	summary: string;
 	editCount: number;
 	diffLineCount: number;
+	/** Per-operation diffs for split-view rendering */
+	ops: Array<{
+		oldContent: string;
+		newContent: string;
+		language: string | undefined;
+		filePath: string;
+	}>;
 };
 
 export type WriteDiffDetails = {
@@ -292,6 +310,15 @@ export type WriteNewDetails = {
 };
 
 export type WriteNoChangeDetails = { _type: "noChange" };
+
+export type EditDiffDetails = {
+	_type: "editDiff";
+	summary: string;
+	oldContent: string;
+	newContent: string;
+	language: string | undefined;
+	filePath: string;
+};
 
 export interface PiPrettyDeps {
 	sdk: PiPrettySdk;
