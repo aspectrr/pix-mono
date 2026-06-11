@@ -335,10 +335,53 @@ function stripes(w: number, _rowOffset: number): string {
 	return BG_BASE + FG_STRIPE + "╱".repeat(w) + RST;
 }
 
-function lnum(n: number | null, w: number, fg = FG_LNUM): string {
+/** Right-aligned line number. `noReset` keeps the active bg alive (no
+ *  trailing RST) so the caller can build one bg-continuous gutter segment. */
+function lnum(
+	n: number | null,
+	w: number,
+	fg = FG_LNUM,
+	noReset = false,
+): string {
 	if (n === null) return " ".repeat(w);
 	const v = String(n);
-	return `${fg}${" ".repeat(Math.max(0, w - v.length))}${v}${RST}`;
+	const pad = " ".repeat(Math.max(0, w - v.length));
+	return noReset ? `${fg}${pad}${v}` : `${fg}${pad}${v}${RST}`;
+}
+
+/** Build one bg-continuous gutter row. A single `gutterBg` is set up front and
+ *  only foreground colors switch inside it (fg changes never reset bg), so no
+ *  internal RST can punch a dark gap. The trailing space adopts `bodyBg` to
+ *  blend the gutter into the code body, then one RST closes the segment. */
+function buildGutter(opts: {
+	borderFg: string;
+	gutterBg: string;
+	bodyBg: string;
+	num: number | null;
+	numFg: string;
+	signFg: string;
+	sign: string;
+	nw: number;
+	continuation: boolean;
+}): string {
+	const {
+		borderFg,
+		gutterBg,
+		bodyBg,
+		num,
+		numFg,
+		signFg,
+		sign,
+		nw,
+		continuation,
+	} = opts;
+	const border = borderFg
+		? `${gutterBg}${borderFg}${BORDER_BAR}`
+		: `${BG_BASE} `;
+	const numCell = continuation
+		? " ".repeat(nw + 2)
+		: `${lnum(num, nw, numFg, true)}${signFg}${sign} `;
+	return `${border}${gutterBg}${numCell}${FG_RULE}│${bodyBg} ${RST}`;
 }
 
 function rule(w: number): string {
@@ -545,14 +588,25 @@ export async function renderUnified(
 		bodyBg = "",
 	): void {
 		const borderFg = sign === "-" ? dc.fgDel : sign === "+" ? dc.fgAdd : "";
-		const border = borderFg ? `${borderFg}${BORDER_BAR}${RST}` : `${BG_BASE} `;
 		const numFg = borderFg || FG_LNUM;
-		const gutter = `${border}${gutterBg}${lnum(num, nw, numFg)}${signFg}${sign}${RST} ${DIVIDER} `;
-		const contGutter = `${border}${gutterBg}${" ".repeat(nw + 1)}${RST} ${DIVIDER} `;
+		const gutterArgs = {
+			borderFg,
+			gutterBg,
+			bodyBg,
+			num,
+			numFg,
+			signFg,
+			sign,
+			nw,
+		};
+		const gutter = buildGutter({ ...gutterArgs, continuation: false });
+		const contGutter = buildGutter({ ...gutterArgs, continuation: true });
 		const rows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), bodyBg);
-		out.push(`${gutter}${rows[0]}${RST}`);
+		// Fill the terminal margin gap (termW trims 4 cols)
+		const bgFill = bodyBg ? `${bodyBg}    ${RST}` : `${BG_BASE}    ${RST}`;
+		out.push(`${gutter}${rows[0]}${bgFill}`);
 		for (let r = 1; r < rows.length; r++)
-			out.push(`${contGutter}${rows[r]}${RST}`);
+			out.push(`${contGutter}${rows[r]}${bgFill}`);
 	}
 
 	while (idx < vis.length) {
@@ -796,7 +850,6 @@ export async function renderSplit(
 					: line.newNum;
 
 		const borderFg = isDel ? dc.fgDel : isAdd ? dc.fgAdd : "";
-		const border = borderFg ? `${borderFg}${BORDER_BAR}${RST}` : ` ${BG_BASE}`;
 		const numFg = borderFg || FG_LNUM;
 
 		let body: string;
@@ -808,18 +861,19 @@ export async function renderSplit(
 			body = `${BG_BASE}${DIM}${hl}`;
 		}
 
-		const gutter = `${border}${gBg}${lnum(num, nw, numFg)}${sFg}${BOLD}${sign}${RST} ${FG_RULE}│${RST} `;
-		const contGutter = `${border}${gBg}${" ".repeat(nw + 1)}${RST} ${FG_RULE}│${RST} `;
+		// Split view's non-bordered context rows lead with a space before bg;
+		// buildGutter handles bordered rows, so feed the same border convention.
+		const splitBorder = borderFg
+			? `${gBg}${borderFg}${BORDER_BAR}`
+			: ` ${BG_BASE}`;
+		const numCell = `${lnum(num, nw, numFg, true)}${sFg}${BOLD}${sign} `;
+		const gutter = `${splitBorder}${gBg}${numCell}${FG_RULE}│${cBg} ${RST}`;
+		const contGutter = `${splitBorder}${gBg}${" ".repeat(nw + 2)}${FG_RULE}│${cBg} ${RST}`;
 		const bodyRows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), cBg);
 		return { gutter, contGutter, bodyRows };
 	}
 
 	const out: string[] = [];
-	const hdrOld = `${BG_BASE}${" ".repeat(Math.max(0, nw - 2))}${dc.fgDel}${DIM}old${RST}`;
-	const hdrNew = `${BG_BASE}${" ".repeat(Math.max(0, nw - 2))}${dc.fgAdd}${DIM}new${RST}`;
-	out.push(
-		`${BG_BASE}${hdrOld}${" ".repeat(Math.max(0, half - nw - 1))}${FG_RULE}┊${RST}${hdrNew}`,
-	);
 	out.push(`${rule(half)}${FG_RULE}┊${RST}${rule(half)}`);
 
 	for (const r of vis) {
@@ -877,7 +931,15 @@ export async function renderSplit(
 				(rightIsEmpty
 					? stripes(cw, stripeRow)
 					: `${BG_EMPTY}${" ".repeat(cw)}${RST}`);
-			out.push(`${lg}${lb}${DIVIDER}${rg}${rb}`);
+			// Determine right-side bg to fill the 4-col terminal margin gap
+			const rBgFill = rightIsEmpty
+				? ""
+				: r.right?.type === "add"
+					? `${BG_ADD}    ${RST}`
+					: r.right?.type === "del"
+						? `${BG_DEL}    ${RST}`
+						: `${BG_BASE}    ${RST}`;
+			out.push(`${lg}${lb}${DIVIDER}${rg}${rb}${rBgFill}`);
 			stripeRow++;
 		}
 	}
