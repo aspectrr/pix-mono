@@ -19,6 +19,7 @@
       "name": "@xynogen/pix-9router",
       "version": "0.2.1",
       "dependencies": {
+        "@xynogen/pix-data": "^0.1.0",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {
@@ -28,8 +29,10 @@
     },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
+        "@xynogen/pix-data": "^0.1.0",
+        "@xynogen/pix-skills": "^0.1.1",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {
@@ -67,7 +70,7 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
