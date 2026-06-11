@@ -20,6 +20,8 @@
  * The `skill` tool IS model-callable: skill() lists/loads bundled skills.
  */
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type {
 	BuildSystemPromptOptions,
 	ExtensionAPI,
@@ -35,6 +37,20 @@ export const CAPABILITY_REMINDER =
 	"Matching skill? Call skill() first. " +
 	"Use /toolbox to discover/enable gated tools. " +
 	"All tools callable via function definitions.";
+
+/**
+ * Build the optional graphify hint line.
+ * Returns a string if graphify-out/graph.json exists in cwd, else undefined.
+ */
+export function graphifyHint(cwd: string): string | undefined {
+	if (existsSync(join(cwd, "graphify-out", "graph.json"))) {
+		return (
+			"graphify-out/graph.json exists — for codebase questions (how does X work, " +
+			'where is Y, trace Z) run `graphify query "<question>"` before reading files.'
+		);
+	}
+	return undefined;
+}
 
 /** Count model-invocable skills (excludes user-only /skill:name entries). */
 export function countInvocableSkills(
@@ -118,6 +134,9 @@ export function buildOrientation(
 	if (skillNames.length) {
 		lines.push(`Skills: ${skillNames.join(", ")}.`);
 	}
+	// Graphify hint — only when a graph is already built for this project
+	const gHint = graphifyHint(process.cwd());
+	if (gHint) lines.push(gHint);
 	return lines.join("\n");
 }
 
@@ -146,7 +165,12 @@ export default function registerCapabilityNudge(pi: ExtensionAPI): void {
 			}
 			content = buildOrientation(tools, skills, activeToolNames);
 		} else {
-			content = CAPABILITY_REMINDER;
+			// Per-turn reminder — append graphify hint when graph exists
+			const cwd = process.cwd();
+			const gHint = graphifyHint(cwd);
+			content = gHint
+				? `${CAPABILITY_REMINDER}\n${gHint}`
+				: CAPABILITY_REMINDER;
 		}
 
 		return {

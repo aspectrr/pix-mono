@@ -1,8 +1,11 @@
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 import {
 	buildOrientation,
 	CAPABILITY_REMINDER,
 	countInvocableSkills,
+	graphifyHint,
 	partitionTools,
 } from "./capability.ts";
 
@@ -200,5 +203,26 @@ describe("buildOrientation", () => {
 	test("steers away from improvising", () => {
 		const out = buildOrientation([tool("read", "builtin")], []);
 		expect(out.toLowerCase()).toContain("improvis");
+	});
+});
+
+describe("graphifyHint", () => {
+	const tmpDir = join(import.meta.dir, ".graphify-hint-test-tmp");
+
+	test("returns undefined when graphify-out/graph.json absent", () => {
+		expect(graphifyHint(tmpDir)).toBeUndefined();
+	});
+
+	test("returns hint string when graphify-out/graph.json exists", () => {
+		try {
+			mkdirSync(join(tmpDir, "graphify-out"), { recursive: true });
+			writeFileSync(join(tmpDir, "graphify-out", "graph.json"), "{}");
+			const hint = graphifyHint(tmpDir);
+			expect(hint).toBeTypeOf("string");
+			expect(hint).toContain("graphify");
+			expect(hint).toContain("graphify query");
+		} finally {
+			rmSync(tmpDir, { recursive: true, force: true });
+		}
 	});
 });
