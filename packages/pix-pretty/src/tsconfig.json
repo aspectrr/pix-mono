@@ -7,7 +7,7 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"types": ["node"],
+		"types": ["node", "bun"],
 		"allowImportingTsExtensions": true
 	},
 	"include": ["*.ts", "*.d.ts", "../_types/**/*.d.ts"]

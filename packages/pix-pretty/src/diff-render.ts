@@ -214,7 +214,7 @@ function termW(): number {
 
 function _readTtyColsDR(): number | undefined {
 	try {
-		const { getWindowSize } = require("tty") as {
+		const { getWindowSize } = require("node:tty") as {
 			getWindowSize?: (fd: number) => [number, number];
 		};
 		if (getWindowSize) {

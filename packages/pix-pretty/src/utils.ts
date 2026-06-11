@@ -83,7 +83,7 @@ export function termW(): number {
 function _readTtyColumns(): number | undefined {
 	try {
 		// Node exposes getWindowSize() on tty.ReadStream / tty.WriteStream
-		const { getWindowSize } = require("tty") as {
+		const { getWindowSize } = require("node:tty") as {
 			getWindowSize?: (fd: number) => [number, number];
 		};
 		if (getWindowSize) {
