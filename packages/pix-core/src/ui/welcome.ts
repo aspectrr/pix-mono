@@ -27,7 +27,10 @@
  *   ✓ Ignore  up to date
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 
 // ─── Theme shim (same pattern as footer.ts) ───────────────────────────────────
 
@@ -283,7 +286,7 @@ export default function (pi: ExtensionAPI) {
 	let dismissed = false;
 	let requestRender: (() => void) | null = null;
 
-	const dismiss = (ctx: any) => {
+	const dismiss = (ctx: ExtensionContext) => {
 		if (dismissed) return;
 		dismissed = true;
 		requestRender = null;

@@ -18,6 +18,7 @@ import { dirname, join } from "node:path";
 import type {
 	ExtensionAPI,
 	ExtensionContext,
+	Theme,
 	ToolInfo,
 } from "@earendil-works/pi-coding-agent";
 import { DynamicBorder, getAgentDir } from "@earendil-works/pi-coding-agent";
@@ -27,10 +28,12 @@ import {
 	fuzzyFilter,
 	Input,
 	Key,
+	type KeybindingsManager,
 	matchesKey,
 	type SelectItem,
 	SelectList,
 	Text,
+	type TUI,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 
@@ -339,7 +342,12 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 		};
 	}): Promise<void> {
 		await ctx.ui.custom<null>(
-			(tui: any, theme: any, _kb: unknown, done: (r: null) => void) => {
+			(
+				tui: TUI,
+				theme: Theme,
+				_kb: KeybindingsManager,
+				done: (r: null) => void,
+			) => {
 				const accent = "accent";
 				const mute = (s: string) => theme.fg("muted", s);
 				const container = new Container();

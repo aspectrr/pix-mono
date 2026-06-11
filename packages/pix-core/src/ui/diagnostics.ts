@@ -9,7 +9,7 @@
  * Registers widget with id "pi-lens" to override external pi-lens widget.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,10 +65,7 @@ function recordFileTouched(filePath: string): void {
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 
-function renderWidget(
-	width: number,
-	theme: { fg: (color: string, s: string) => string },
-): string[] {
+function renderWidget(width: number, theme: Theme): string[] {
 	const w = Math.max(1, width || 80);
 
 	const cyan = (s: string) => theme.fg("accent", s);
@@ -117,7 +114,7 @@ export default function (pi: ExtensionAPI) {
 		if (!ctx.ui.setWidget) return;
 		ctx.ui.setWidget(
 			"pi-lens",
-			(tui: { requestRender(): void }, theme: any) => {
+			(tui, theme: Theme) => {
 				requestRenderFn = () => tui.requestRender();
 				return {
 					render: (width: number) => renderWidget(width, theme),
