@@ -211,8 +211,6 @@ export type MultiGrepParams = {
 	limit?: number;
 };
 
-export type GrepRenderState = { _gk?: string; _gt?: string };
-
 export type EditRenderState = {
 	_pk?: string;
 	_pt?: string;
@@ -228,8 +226,6 @@ export type WriteRenderState = {
 	_nfk?: string;
 	_nft?: string;
 };
-
-export type MultiGrepRenderState = { _mgk?: string; _mgt?: string };
 
 export type FindResultDetails = {
 	_type: "findResult";

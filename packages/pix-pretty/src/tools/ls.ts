@@ -4,8 +4,6 @@ import type {
 	LsToolInput,
 } from "@earendil-works/pi-coding-agent";
 
-import { FG_DIM, RST } from "../ansi.js";
-import { renderTree } from "../renderers.js";
 import type {
 	LsParams,
 	PiPrettyApi,
@@ -14,10 +12,11 @@ import type {
 	ToolFactory,
 	ToolResultLike,
 } from "../types.js";
+import { FG_DIM, RST } from "../ansi.js";
+import { renderTree } from "../renderers.js";
 import {
 	fillToolBackground,
 	getTextContent,
-	isTextContent,
 	renderToolError,
 	setResultDetails,
 } from "../utils.js";
@@ -98,13 +97,9 @@ export function registerLsTool(
 				return text;
 			}
 
-			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "listed";
+			const output = getTextContent(result) || "listed";
 			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
+				fillToolBackground(`  ${theme.fg("dim", output.slice(0, 120))}`),
 			);
 			return text;
 		},

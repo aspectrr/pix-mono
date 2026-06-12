@@ -4,8 +4,6 @@ import type {
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 
-import { FG_DIM, RST } from "../ansi.js";
-import { renderFindResults } from "../renderers.js";
 import type {
 	FindParams,
 	FindResultDetails,
@@ -19,8 +17,8 @@ import {
 	appendNotices,
 	fillToolBackground,
 	getTextContent,
-	isTextContent,
 	makeTextResult,
+	renderDimPreview,
 	renderToolError,
 	setResultDetails,
 } from "../utils.js";
@@ -137,22 +135,8 @@ export function registerFindTool(
 				return text;
 			}
 
-			const d = result.details;
-			if (d?._type === "findResult" && d.text) {
-				const rendered = renderFindResults(d.text);
-				const info = `${FG_DIM}${d.matchCount} files${RST}`;
-				text.setText(fillToolBackground(`  ${info}\n${rendered}`));
-				return text;
-			}
-
-			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "found";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const output = getTextContent(result) || "found";
+			text.setText(renderDimPreview(output, theme));
 			return text;
 		},
 	});

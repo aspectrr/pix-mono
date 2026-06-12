@@ -1,4 +1,3 @@
-import { basename, dirname } from "node:path";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
 import {
@@ -15,7 +14,7 @@ import { MAX_PREVIEW_LINES } from "./config.js";
 import { hlBlock } from "./highlight.js";
 import { dirIcon, fileIcon } from "./icons.js";
 import { lang } from "./lang.js";
-import { lnum, normalizeLineEndings, rule, termW } from "./utils.js";
+import { lnum, normalizeLineEndings, pluralize, rule, termW } from "./utils.js";
 
 /** Render syntax-highlighted file content with line numbers. */
 export async function renderFileContent(
@@ -51,7 +50,7 @@ export async function renderFileContent(
 	out.push(rule(tw));
 	if (total > maxLines) {
 		out.push(
-			`${FG_DIM}  … ${total - maxLines} more lines (${total} total)${RST}`,
+			`${FG_DIM}  … ${pluralize(total - maxLines, "more line")} (${total} total)${RST}`,
 		);
 	}
 	return out.join("\n");
@@ -77,7 +76,7 @@ export function renderBashOutput(
 
 	let body = show.join("\n");
 	if (remaining > 0) {
-		body += `\n${FG_DIM}  … ${remaining} more lines${RST}`;
+		body += `\n${FG_DIM}  … ${pluralize(remaining, "more line")}${RST}`;
 	}
 
 	return { summary: codeStr, body };
@@ -110,105 +109,8 @@ export function renderTree(text: string, _basePath: string): string {
 
 	if (total > MAX_PREVIEW_LINES) {
 		out.push(
-			`${FG_RULE}└── ${RST}${FG_DIM}… ${total - MAX_PREVIEW_LINES} more entries${RST}`,
+			`${FG_RULE}└── ${RST}${FG_DIM}… ${pluralize(total - MAX_PREVIEW_LINES, "more entry", "more entries")}${RST}`,
 		);
-	}
-
-	return out.join("\n");
-}
-
-/** Render find results grouped by directory with icons. */
-export function renderFindResults(text: string): string {
-	const lines = text.trim().split("\n").filter(Boolean);
-	if (!lines.length) return `${FG_DIM}(no matches)${RST}`;
-
-	// Group by directory
-	const groups = new Map<string, string[]>();
-	for (const line of lines) {
-		const trimmed = line.trim();
-		const dir = dirname(trimmed) || ".";
-		const file = basename(trimmed);
-		if (!groups.has(dir)) groups.set(dir, []);
-		const bucket = groups.get(dir);
-		if (bucket) bucket.push(file);
-	}
-
-	const out: string[] = [];
-	let count = 0;
-
-	for (const [dir, files] of groups) {
-		if (count > 0) out.push(""); // blank line between groups
-		out.push(`${dirIcon()}${FG_BLUE}${BOLD}${dir}/${RST}`);
-		for (let i = 0; i < files.length; i++) {
-			if (count >= MAX_PREVIEW_LINES) {
-				out.push(`  ${FG_DIM}… ${lines.length - count} more files${RST}`);
-				return out.join("\n");
-			}
-			const isLast = i === files.length - 1;
-			const prefix = isLast ? "└── " : "├── ";
-			const icon = fileIcon(files[i]);
-			out.push(`  ${FG_RULE}${prefix}${RST}${icon}${files[i]}`);
-			count++;
-		}
-	}
-
-	return out.join("\n");
-}
-
-/** Render grep results with highlighted matches and line numbers. */
-export async function renderGrepResults(
-	text: string,
-	pattern: string,
-): Promise<string> {
-	const lines = normalizeLineEndings(text).split("\n");
-	if (!lines.length || (lines.length === 1 && !lines[0].trim()))
-		return `${FG_DIM}(no matches)${RST}`;
-
-	const out: string[] = [];
-	let currentFile = "";
-	let count = 0;
-
-	// Try to build a regex for highlighting
-	let re: RegExp | null = null;
-	try {
-		re = new RegExp(`(${pattern})`, "gi");
-	} catch {
-		// invalid regex — skip highlighting
-	}
-
-	for (const line of lines) {
-		if (count >= MAX_PREVIEW_LINES) {
-			out.push(`${FG_DIM}  … more matches${RST}`);
-			break;
-		}
-
-		// ripgrep-style: "file:line:content" or "file-line-content" or just "file"
-		const fileMatch = line.match(/^(.+?)[:-](\d+)[:-](.*)$/);
-		if (fileMatch) {
-			const [, file, lineNo, content] = fileMatch;
-			if (file !== currentFile) {
-				if (currentFile) out.push(""); // blank line between files
-				const icon = fileIcon(file);
-				out.push(`${icon}${FG_BLUE}${BOLD}${file}${RST}`);
-				currentFile = file;
-			}
-
-			const nw = Math.max(3, lineNo.length);
-			let display = content;
-			if (re) {
-				display = content.replace(re, `${RST}${FG_YELLOW}${BOLD}$1${RST}`);
-			}
-			out.push(
-				`  ${lnum(Number(lineNo), nw)} ${FG_RULE}│${RST} ${display}${RST}`,
-			);
-			count++;
-		} else if (line.trim() === "--") {
-			// ripgrep separator
-			out.push(`  ${FG_DIM}  ···${RST}`);
-		} else if (line.trim()) {
-			out.push(line);
-			count++;
-		}
 	}
 
 	return out.join("\n");

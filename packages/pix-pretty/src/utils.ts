@@ -5,10 +5,13 @@ import {
 	ANSI_CAPTURE_RE,
 	BG_BASE,
 	BG_ERROR,
+	BOLD,
 	FG_LNUM,
 	FG_RULE,
+	FG_YELLOW,
 	RST,
 } from "./ansi.js";
+import { MAX_PREVIEW_LINES } from "./config.js";
 import type {
 	FgTheme,
 	ToolContent,
@@ -46,6 +49,64 @@ export function fillToolBackground(text: string, bg = BG_BASE): string {
 			return `${bg}${fitted}${" ".repeat(padding)}${RST}`;
 		})
 		.join("\n");
+}
+
+export function pluralize(
+	count: number,
+	noun: string,
+	plural?: string,
+): string {
+	return `${count} ${count === 1 ? noun : (plural ?? `${noun}s`)}`;
+}
+
+export type DimPreviewOptions = {
+	maxLines?: number;
+	header?: string;
+	/** Pattern whose matches are highlighted (yellow bold) inside dim lines. */
+	highlight?: string;
+};
+
+function safeHighlightRegex(pattern: string): RegExp | null {
+	try {
+		return new RegExp(`(${pattern})`, "gi");
+	} catch {
+		return null;
+	}
+}
+
+function dimLineWithHighlight(
+	line: string,
+	theme: FgTheme,
+	re: RegExp | null,
+): string {
+	if (!re) return theme.fg("dim", line);
+	// split with capture group: odd indexes are matches
+	return line
+		.split(re)
+		.map((part, i) =>
+			i % 2 ? `${FG_YELLOW}${BOLD}${part}${RST}` : theme.fg("dim", part),
+		)
+		.join("");
+}
+
+export function renderDimPreview(
+	text: string,
+	theme: FgTheme,
+	opts: DimPreviewOptions = {},
+): string {
+	const maxLines = opts.maxLines ?? MAX_PREVIEW_LINES;
+	const re = opts.highlight ? safeHighlightRegex(opts.highlight) : null;
+	const output = normalizeLineEndings(text).trim() || "done";
+	const lines = output.split("\n");
+	const preview = lines
+		.slice(0, maxLines)
+		.map((line) => `  ${dimLineWithHighlight(line, theme, re)}`);
+	if (opts.header) preview.unshift(`  ${theme.fg("dim", opts.header)}`);
+	if (lines.length > maxLines) {
+		const more = pluralize(lines.length - maxLines, "more line");
+		preview.push(`  ${theme.fg("dim", `… ${more}`)}`);
+	}
+	return fillToolBackground(preview.join("\n"));
 }
 
 let _cachedTermW: number | undefined;

@@ -4,13 +4,10 @@ import type {
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 
-import { FG_DIM, RST } from "../ansi.js";
 import { fffFormatGrepText } from "../fff.js";
-import { renderGrepResults } from "../renderers.js";
 import type {
 	GrepResultDetails,
 	MultiGrepParams,
-	MultiGrepRenderState,
 	PiPrettyApi,
 	RenderContextLike,
 	ThemeLike,
@@ -21,14 +18,16 @@ import {
 	appendNotices,
 	buildLiteralAlternationPattern,
 	countRipgrepMatches,
+	fillToolBackground,
 	getConstraintBackedPath,
 	getErrorMessage,
 	getTextContent,
-	isTextContent,
 	makeTextResult,
 	normalizeLineEndings,
+	pluralize,
+	renderDimPreview,
+	renderToolError,
 	shouldIgnoreCaseForPatterns,
-	termW,
 	trimToUndefined,
 } from "../utils.js";
 import type { ToolContext } from "./context.js";
@@ -278,7 +277,7 @@ export function registerMultiGrepTool(
 				theme.fg("accent", patterns.map((p) => `"${p}"`).join(", "));
 			content += path;
 			if (constraints) content += theme.fg("muted", ` (${constraints})`);
-			text.setText(content);
+			text.setText(fillToolBackground(content));
 			return text;
 		},
 
@@ -286,43 +285,26 @@ export function registerMultiGrepTool(
 			result: ToolResultLike<GrepResultDetails | { error?: string }>,
 			_opt: ToolRenderResultOptions,
 			theme: ThemeLike,
-			renderCtx: RenderContextLike<MultiGrepRenderState>,
+			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 
 			if (renderCtx.isError) {
-				text.setText(
-					`\n${theme.fg("error", getTextContent(result) || "Error")}`,
-				);
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
 			const d = result.details;
-			if (d && "_type" in d && d._type === "grepResult" && d.text) {
-				const key = `mgrep:${d.pattern}:${d.matchCount}:${termW()}`;
-				if (renderCtx.state._mgk !== key) {
-					renderCtx.state._mgk = key;
-					const info = `${FG_DIM}${d.matchCount} matches${RST}`;
-					renderCtx.state._mgt = `  ${info}`;
-
-					renderGrepResults(d.text, d.pattern)
-						.then((rendered: string) => {
-							if (renderCtx.state._mgk !== key) return;
-							renderCtx.state._mgt = `  ${info}\n${rendered}`;
-							renderCtx.invalidate();
-						})
-						.catch(() => {});
-				}
-				text.setText(
-					renderCtx.state._mgt ?? `  ${FG_DIM}${d.matchCount} matches${RST}`,
-				);
-				return text;
-			}
-
-			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "searched";
-			text.setText(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`);
+			const isGrep = d && "_type" in d && d._type === "grepResult";
+			const output = getTextContent(result) || "searched";
+			text.setText(
+				renderDimPreview(output, theme, {
+					header: isGrep
+						? pluralize(d.matchCount, "match", "matches")
+						: undefined,
+					highlight: isGrep ? d.pattern : undefined,
+				}),
+			);
 			return text;
 		},
 	});

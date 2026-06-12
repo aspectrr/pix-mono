@@ -123,7 +123,6 @@ export class CursorStore {
 
 /**
  * Convert FFF GrepResult items to ripgrep-style "file:line:content" text.
- * This ensures pi-pretty's renderGrepResults works unchanged.
  */
 export function fffFormatGrepText(items: GrepMatch[], limit: number): string {
 	const capped = items.slice(0, limit);

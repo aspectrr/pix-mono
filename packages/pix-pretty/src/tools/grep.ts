@@ -4,12 +4,9 @@ import type {
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 
-import { FG_DIM, RST } from "../ansi.js";
 import { fffFormatGrepText } from "../fff.js";
-import { renderGrepResults } from "../renderers.js";
 import type {
 	GrepParams,
-	GrepRenderState,
 	GrepResultDetails,
 	PiPrettyApi,
 	RenderContextLike,
@@ -25,9 +22,10 @@ import {
 	isTextContent,
 	makeTextResult,
 	normalizeLineEndings,
+	pluralize,
+	renderDimPreview,
 	renderToolError,
 	setResultDetails,
-	termW,
 } from "../utils.js";
 import type { ToolContext } from "./context.js";
 
@@ -155,7 +153,7 @@ export function registerGrepTool(
 			result: ToolResultLike<GrepResultDetails>,
 			_opt: ToolRenderResultOptions,
 			theme: ThemeLike,
-			renderCtx: RenderContextLike<GrepRenderState>,
+			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 
@@ -165,37 +163,15 @@ export function registerGrepTool(
 			}
 
 			const d = result.details;
-			if (d?._type === "grepResult" && d.text) {
-				const key = `grep:${d.pattern}:${d.matchCount}:${termW()}`;
-				if (renderCtx.state._gk !== key) {
-					renderCtx.state._gk = key;
-					const info = `${FG_DIM}${d.matchCount} matches${RST}`;
-					renderCtx.state._gt = fillToolBackground(`  ${info}`);
-
-					renderGrepResults(d.text, d.pattern)
-						.then((rendered: string) => {
-							if (renderCtx.state._gk !== key) return;
-							renderCtx.state._gt = fillToolBackground(
-								`  ${info}\n${rendered}`,
-							);
-							renderCtx.invalidate();
-						})
-						.catch(() => {});
-				}
-				text.setText(
-					renderCtx.state._gt ??
-						fillToolBackground(`  ${FG_DIM}${d.matchCount} matches${RST}`),
-				);
-				return text;
-			}
-
-			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "searched";
+			const output = getTextContent(result) || "searched";
 			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
+				renderDimPreview(output, theme, {
+					header:
+						d?._type === "grepResult"
+							? pluralize(d.matchCount, "match", "matches")
+							: undefined,
+					highlight: d?._type === "grepResult" ? d.pattern : undefined,
+				}),
 			);
 			return text;
 		},
