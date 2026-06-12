@@ -6,9 +6,9 @@ import {
 	BG_BASE,
 	BG_ERROR,
 	BOLD,
+	FG_GREEN,
 	FG_LNUM,
 	FG_RULE,
-	FG_YELLOW,
 	RST,
 } from "./ansi.js";
 import { MAX_PREVIEW_LINES } from "./config.js";
@@ -62,7 +62,7 @@ export function pluralize(
 export type DimPreviewOptions = {
 	maxLines?: number;
 	header?: string;
-	/** Pattern whose matches are highlighted (yellow bold) inside dim lines. */
+	/** Pattern whose matches are highlighted (green bold) inside dim lines. */
 	highlight?: string;
 };
 
@@ -84,7 +84,7 @@ function dimLineWithHighlight(
 	return line
 		.split(re)
 		.map((part, i) =>
-			i % 2 ? `${FG_YELLOW}${BOLD}${part}${RST}` : theme.fg("dim", part),
+			i % 2 ? `${FG_GREEN}${BOLD}${part}${RST}` : theme.fg("dim", part),
 		)
 		.join("");
 }
