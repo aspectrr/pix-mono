@@ -10,6 +10,7 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
@@ -26,6 +27,38 @@ const TODO_GLYPH: Record<TodoStatus, string> = {
 	done: "●",
 	blocked: "⊘",
 };
+
+/** Theme color key per status — drives both glyph and (for active) row tint. */
+const TODO_COLOR: Record<TodoStatus, string> = {
+	pending: "muted",
+	in_progress: "accent",
+	done: "success",
+	blocked: "error",
+};
+
+export type TodoTheme = {
+	fg: (color: string, text: string) => string;
+	bold: (text: string) => string;
+};
+
+/** Colored checklist for the TUI: glyphs tinted by status, active row bold. */
+export function renderTodoLines(items: TodoItem[], theme: TodoTheme): string {
+	if (!items.length) return theme.fg("muted", "(no todos)");
+	const done = items.filter((t) => t.status === "done").length;
+	const head = theme.fg("muted", `Todos ${done}/${items.length} done:`);
+	const lines = items.map((t) => {
+		const color = TODO_COLOR[t.status];
+		const glyph = theme.fg(color, TODO_GLYPH[t.status]);
+		const body = `${t.id}. ${t.text}`;
+		// Highlight the in-flight task so the eye lands on it first.
+		const label =
+			t.status === "in_progress"
+				? theme.bold(theme.fg("accent", body))
+				: theme.fg(t.status === "done" ? "muted" : "text", body);
+		return `${glyph} ${label}`;
+	});
+	return `${head}\n${lines.join("\n")}`;
+}
 
 const parseItems = (raw: string): string[] =>
 	raw
@@ -102,6 +135,10 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				}),
 			),
 		}),
+		renderResult(_result, _options, theme) {
+			return new Text(renderTodoLines(todos, theme as TodoTheme), 0, 0);
+		},
+
 		async execute(_id, params) {
 			// AgentToolResult now requires a `details` field. These todo results have
 			// no structured details, so emit `undefined` via small local helpers.

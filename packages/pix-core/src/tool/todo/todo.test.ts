@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import registerTodo from "./todo.ts";
+import registerTodo, { renderTodoLines, type TodoItem } from "./todo.ts";
+
+// Stub theme tags each fragment with its color/bold so assertions can verify
+// which status got which tint, without depending on real ANSI codes.
+const tagTheme = {
+	fg: (color: string, text: string) => `[${color}]${text}[/]`,
+	bold: (text: string) => `<b>${text}</b>`,
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -598,5 +605,42 @@ describe("restore", () => {
 		);
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
+	});
+});
+
+describe("renderTodoLines (colored TUI render)", () => {
+	const items: TodoItem[] = [
+		{ id: 1, text: "alpha", status: "done" },
+		{ id: 2, text: "bravo", status: "in_progress" },
+		{ id: 3, text: "charlie", status: "pending" },
+		{ id: 4, text: "delta", status: "blocked" },
+	];
+
+	test("empty list renders muted placeholder", () => {
+		expect(renderTodoLines([], tagTheme)).toBe("[muted](no todos)[/]");
+	});
+
+	test("tints each glyph by status", () => {
+		const out = renderTodoLines(items, tagTheme);
+		expect(out).toContain("[success]●[/]"); // done
+		expect(out).toContain("[accent]◐[/]"); // in_progress
+		expect(out).toContain("[muted]○[/]"); // pending
+		expect(out).toContain("[error]⊘[/]"); // blocked
+	});
+
+	test("highlights the in-progress row bold + accent", () => {
+		const out = renderTodoLines(items, tagTheme);
+		expect(out).toContain("<b>[accent]2. bravo[/]</b>");
+	});
+
+	test("dims completed rows and uses text color for active-but-not-running", () => {
+		const out = renderTodoLines(items, tagTheme);
+		expect(out).toContain("[muted]1. alpha[/]"); // done body muted
+		expect(out).toContain("[text]3. charlie[/]"); // pending body text
+	});
+
+	test("shows the done/total count header", () => {
+		const out = renderTodoLines(items, tagTheme);
+		expect(out).toContain("[muted]Todos 1/4 done:[/]");
 	});
 });
