@@ -48,8 +48,8 @@ describe("CAPABILITY_REMINDER", () => {
 		expect(CAPABILITY_REMINDER.toLowerCase()).toContain("improvis");
 	});
 
-	test("nudges model to call skill() when a skill matches", () => {
-		expect(CAPABILITY_REMINDER).toContain("skill()");
+	test("nudges model to call read_skills() when a skill matches", () => {
+		expect(CAPABILITY_REMINDER).toContain("read_skills()");
 	});
 
 	test("points at /toolbox slash command for discovery (not a function call)", () => {
@@ -132,9 +132,9 @@ describe("buildOrientation", () => {
 		expect(out).toContain("2 skills");
 	});
 
-	test("explains how to use skill() and /toolbox for discovery", () => {
+	test("explains how to use read_skills() and /toolbox for discovery", () => {
 		const out = buildOrientation([tool("read", "builtin")], []);
-		expect(out).toContain("skill()");
+		expect(out).toContain("read_skills()");
 		expect(out).toContain("/toolbox");
 		// toolbox must NOT appear as a function call
 		expect(out).not.toContain("toolbox(");

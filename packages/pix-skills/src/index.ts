@@ -1,7 +1,7 @@
 /**
  * pix-skills — skill loader extension
  *
- * Registers a `skill` tool that lets the agent load any bundled skill's
+ * Registers a `read_skills` tool that lets the agent load any bundled skill's
  * full SKILL.md (or flat .md) by name. This is the safe "agent prompts itself"
  * pattern: the agent calls the tool explicitly; no autonomous injection.
  *
@@ -108,16 +108,16 @@ const ParamsSchema = Type.Object({
 
 export default function registerSkillLoader(pi: ExtensionAPI): void {
 	pi.registerTool({
-		name: "skill",
-		label: "Read Skill",
+		name: "read_skills",
+		label: "Read Skills",
 		description:
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
-			"Call skill() with no arguments to list all available skills and their descriptions.",
-			"Call skill(name=<skill>) to read the description of a specific skill before deciding to load it.",
-			"Call skill(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
-			"Prefer skill() over the read tool for skills — it resolves the correct path regardless of install location.",
+			"Call read_skills() with no arguments to list all available skills and their descriptions.",
+			"Call read_skills(name=<skill>) to read the description of a specific skill before deciding to load it.",
+			"Call read_skills(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
+			"Prefer read_skills() over the read tool for skills — it resolves the correct path regardless of install location.",
 		],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
@@ -194,7 +194,7 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 			const { name, full } = args as { name?: string; full?: boolean };
 			const label = name ? `${name}${full ? " (full)" : ""}` : "list";
 			return new Text(
-				`${theme.fg("toolTitle", theme.bold("skill"))} ${theme.fg("muted", label)}`,
+				`${theme.fg("toolTitle", theme.bold("read_skills"))} ${theme.fg("muted", label)}`,
 				0,
 				0,
 			);
