@@ -47,6 +47,7 @@ export function registerWriteTool(
 	pi.registerTool({
 		...origWrite,
 		name: "write",
+		renderShell: "self",
 
 		async execute(
 			tid: string,

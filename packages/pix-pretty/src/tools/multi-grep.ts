@@ -51,6 +51,7 @@ export function registerMultiGrepTool(
 	pi.registerTool({
 		name: "multi_grep",
 		label: "multi_grep",
+		renderShell: "self",
 		description: [
 			"Search file contents for lines matching ANY of multiple patterns (OR logic).",
 			"Uses SIMD-accelerated Aho-Corasick multi-pattern matching when FFF is available.",

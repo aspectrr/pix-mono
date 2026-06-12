@@ -49,11 +49,26 @@ export function fillToolBackground(text: string, bg = BG_BASE): string {
 }
 
 let _cachedTermW: number | undefined;
+let _termWResizeBound = false;
+
+function _bindTermWResize(): void {
+	if (_termWResizeBound) return;
+	_termWResizeBound = true;
+	// Persistent listeners: every SIGWINCH invalidates the cache so the next
+	// termW() re-reads. `.once` only caught the first resize, leaving width
+	// stale on subsequent resizes.
+	const invalidate = () => {
+		_cachedTermW = undefined;
+	};
+	process.stdout.on("resize", invalidate);
+	process.stdin.on("resize", invalidate);
+}
 
 /** Read terminal width — checks all available sources in priority order.
  *  Falls back to querying the controlling tty via fd 1/2/stdin ioctl.
  *  Result is cached and invalidated on SIGWINCH / stdout resize. */
 export function termW(): number {
+	_bindTermWResize();
 	if (_cachedTermW !== undefined) return _cachedTermW;
 
 	const stderrWithColumns = process.stderr as NodeJS.WriteStream & {
@@ -66,14 +81,6 @@ export function termW(): number {
 		_readTtyColumns() ||
 		120;
 	_cachedTermW = Math.max(1, Math.min(raw, 210));
-
-	// Invalidate on resize so next call re-reads
-	process.stdout.once("resize", () => {
-		_cachedTermW = undefined;
-	});
-	process.stdin.once("resize", () => {
-		_cachedTermW = undefined;
-	});
 
 	return _cachedTermW;
 }

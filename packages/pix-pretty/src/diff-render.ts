@@ -14,6 +14,7 @@ import { MAX_HL_CHARS, MAX_RENDER_LINES, WORD_DIFF_MIN_SIM } from "./config.js";
 import type { DiffLine, ParsedDiff } from "./diff.js";
 import { hlBlock } from "./highlight.js";
 import type { BundledLanguage } from "./types.js";
+import { termW as utilsTermW } from "./utils.js";
 
 // ---------------------------------------------------------------------------
 // Env-overridable color/threshold helpers (mirror pi-diff)
@@ -73,7 +74,6 @@ const ANSI_CAPTURE_RE = new RegExp(`${ESC_RE}\\[([^m]*)m`, "g");
 // ---------------------------------------------------------------------------
 
 const MAX_TERM_WIDTH = 210;
-const DEFAULT_TERM_WIDTH = 200;
 
 const MAX_PREVIEW_LINES = envInt("PRETTY_MAX_PREVIEW_LINES", 80);
 
@@ -201,36 +201,10 @@ function tabs(s: string): string {
 }
 
 function termW(): number {
-	// Delegate to utils.termW which has tty ioctl fallback + resize invalidation
-	const stderrCols = (process.stderr as { columns?: number }).columns;
-	const raw =
-		process.stdout.columns ||
-		stderrCols ||
-		Number.parseInt(process.env.COLUMNS ?? "", 10) ||
-		_readTtyColsDR() ||
-		DEFAULT_TERM_WIDTH;
-	return Math.max(80, Math.min(raw, MAX_TERM_WIDTH));
-}
-
-function _readTtyColsDR(): number | undefined {
-	try {
-		const { getWindowSize } = require("node:tty") as {
-			getWindowSize?: (fd: number) => [number, number];
-		};
-		if (getWindowSize) {
-			for (const fd of [1, 2, 0]) {
-				try {
-					const [cols] = getWindowSize(fd);
-					if (cols && cols > 0) return cols;
-				} catch {
-					/* not a tty */
-				}
-			}
-		}
-	} catch {
-		/* tty unavailable */
-	}
-	return undefined;
+	// Single source of truth: utils.termW caches, falls back to tty ioctl, and
+	// invalidates on resize. Diff layout needs a hard floor of 80 cols for the
+	// split-view column math, so clamp the shared value here.
+	return Math.max(80, Math.min(utilsTermW(), MAX_TERM_WIDTH));
 }
 
 /** Pad/truncate `s` to exactly `w` visible chars. ANSI-aware. */

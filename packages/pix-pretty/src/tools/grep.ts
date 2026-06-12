@@ -42,6 +42,7 @@ export function registerGrepTool(
 	pi.registerTool({
 		...origGrep,
 		name: "grep",
+		renderShell: "self",
 
 		async execute(
 			tid: string,

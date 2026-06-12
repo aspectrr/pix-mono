@@ -34,6 +34,7 @@ export function registerLsTool(
 	pi.registerTool({
 		...origLs,
 		name: "ls",
+		renderShell: "self",
 
 		async execute(
 			tid: string,

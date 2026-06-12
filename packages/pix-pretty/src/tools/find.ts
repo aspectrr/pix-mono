@@ -37,6 +37,7 @@ export function registerFindTool(
 	pi.registerTool({
 		...origFind,
 		name: "find",
+		renderShell: "self",
 
 		async execute(
 			tid: string,

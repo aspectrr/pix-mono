@@ -39,6 +39,9 @@ export function registerReadTool(
 	pi.registerTool({
 		...origRead,
 		name: "read",
+		// Full-width framing baked at termW(); default Box shell pads x by 1
+		// and re-wraps at width-2, splitting every line into a padding row.
+		renderShell: "self",
 
 		async execute(
 			tid: string,

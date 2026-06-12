@@ -39,6 +39,9 @@ export function registerBashTool(
 	pi.registerTool({
 		...origBash,
 		name: "bash",
+		// Full-width framing (rules + bg fill) baked at termW(); the default
+		// Box shell pads x by 1 and re-wraps at width-2, splitting every line.
+		renderShell: "self",
 
 		async execute(
 			tid: string,
