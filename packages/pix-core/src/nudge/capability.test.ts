@@ -100,7 +100,7 @@ describe("partitionTools", () => {
 	test("without an active set, every tool counts as active (gated 0)", () => {
 		const { active, gated } = partitionTools([
 			tool("read", "builtin"),
-			tool("ast_grep_search", "builtin"),
+			tool("find", "builtin"),
 		]);
 		expect(active).toBe(2);
 		expect(gated).toBe(0);
@@ -111,8 +111,8 @@ describe("partitionTools", () => {
 			[
 				tool("read", "builtin"),
 				tool("grep", "builtin"),
-				tool("ast_grep_search", "builtin"),
-				tool("ctx_search", "builtin"),
+				tool("find", "builtin"),
+				tool("ls", "builtin"),
 			],
 			["read", "grep"],
 		);
@@ -146,8 +146,8 @@ describe("buildOrientation", () => {
 			[
 				tool("read", "builtin"),
 				tool("grep", "builtin"),
-				tool("ast_grep_search", "builtin"),
-				tool("ctx_search", "builtin"),
+				tool("find", "builtin"),
+				tool("ls", "builtin"),
 			],
 			[],
 			["read", "grep"], // active set: 2 gated out
@@ -158,7 +158,7 @@ describe("buildOrientation", () => {
 
 	test("singular phrasing when exactly one tool is gated", () => {
 		const out = buildOrientation(
-			[tool("read", "builtin"), tool("ast_grep_search", "builtin")],
+			[tool("read", "builtin"), tool("find", "builtin")],
 			[],
 			["read"],
 		);
@@ -177,7 +177,7 @@ describe("buildOrientation", () => {
 
 	test("no gate line when active set is unknown", () => {
 		const out = buildOrientation(
-			[tool("read", "builtin"), tool("ast_grep_search", "builtin")],
+			[tool("read", "builtin"), tool("find", "builtin")],
 			[],
 		);
 		expect(out).not.toContain("gated out of the prompt");

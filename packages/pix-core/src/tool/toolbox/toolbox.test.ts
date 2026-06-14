@@ -183,7 +183,9 @@ afterAll(() => {
 	delete process.env.PI_CODING_AGENT_DIR;
 	try {
 		rmSync(tmpAgentDir, { recursive: true });
-	} catch {}
+	} catch {
+		// temp dir may already be gone — safe to ignore
+	}
 });
 
 function makeHost(toolNames: string[]) {
@@ -245,7 +247,7 @@ function makeCtx() {
 }
 
 describe("/toolbox command", () => {
-	const ALL = ["read", "write", "bash", "grep", "ast_grep_search"];
+	const ALL = ["read", "write", "bash", "grep", "find"];
 
 	async function boot() {
 		const host = makeHost(ALL);
@@ -267,7 +269,7 @@ describe("/toolbox command", () => {
 		expect(notes.length).toBe(1);
 		// only non-core tools shown, all start active
 		expect(notes[0].text).toContain("✓ active  grep");
-		expect(notes[0].text).toContain("✓ active  ast_grep_search");
+		expect(notes[0].text).toContain("✓ active  find");
 		// core tools excluded from toolbox
 		expect(notes[0].text).not.toContain("  read");
 		expect(notes[0].text).not.toContain("  bash");
@@ -278,15 +280,15 @@ describe("/toolbox command", () => {
 		const { ctx, notes } = makeCtx();
 		await host.command("toolbox")?.handler("list", ctx);
 		expect(notes[0].text).toContain("grep");
-		expect(notes[0].text).toContain("ast_grep_search");
+		expect(notes[0].text).toContain("find");
 		expect(notes[0].text).not.toContain("  bash");
 	});
 
 	test("/toolbox list <query> filters", async () => {
 		const host = await boot();
 		const { ctx, notes } = makeCtx();
-		await host.command("toolbox")?.handler("list ast", ctx);
-		expect(notes[0].text).toContain("ast_grep_search");
+		await host.command("toolbox")?.handler("list fin", ctx);
+		expect(notes[0].text).toContain("find");
 		expect(notes[0].text).not.toContain("✓ active  read");
 	});
 
