@@ -296,7 +296,7 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		dismissed = false;
 
-		// Snapshot static values now (model may change mid-session)
+		// cwd is static; model can change via /model so keep it mutable
 		const modelId = ctx.model?.id ?? "—";
 		const cwd = shortCwd(ctx.cwd);
 
@@ -320,15 +320,12 @@ export default function (pi: ExtensionAPI) {
 			"welcome",
 			(tui: { requestRender(): void }, theme: Theme) => {
 				requestRender = () => tui.requestRender();
-				const logoLines = buildLogoLines(
-					theme as unknown as Theme,
-					modelId,
-					cwd,
-				);
 
 				return {
 					render: () => {
 						const t = theme as unknown as Theme;
+						// Re-read modelId each render so /model changes show live
+						const logoLines = buildLogoLines(t, modelId, cwd);
 						return [...logoLines, ...buildCheckLines(t, CHECKS), ""];
 					},
 					dispose() {
