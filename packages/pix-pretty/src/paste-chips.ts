@@ -134,6 +134,11 @@ function chip(
 	return `${color}${BOLD}${icon} ${label}${RST}${FG_DIM} ${meta}${RST}`;
 }
 
+/** True when `text` ends with a Pi paste marker (chip), e.g. `[paste #1 58 chars]`. */
+export function endsWithMarker(text: string): boolean {
+	return /\[paste #\d+[^\]]*\]$/.test(text);
+}
+
 function compactNumber(raw: string): string {
 	const n = Number.parseInt(raw, 10);
 	if (!Number.isFinite(n)) return raw;
@@ -144,16 +149,42 @@ function compactNumber(raw: string): string {
 
 // ─── Custom editor ────────────────────────────────────────────────────────────
 
+// handlePaste is TS-private in CustomEditor but runtime-public JS. We patch it
+// per-instance, capturing the base implementation, so large text pastes get the
+// same trailing-space treatment as image chips.
+type PasteHandler = { handlePaste(text: string): void };
+
 class ChipEditor extends CustomEditor {
 	private readonly imageIds = new Set<number>();
+
+	constructor(...args: ConstructorParameters<typeof CustomEditor>) {
+		super(...args);
+		this.patchHandlePaste();
+	}
 
 	override insertTextAtCursor(text: string): void {
 		const internals = this as unknown as EditorInternals;
 		const replaced = replaceImagePaths(text, internals, this.imageIds);
 		// Append a trailing space when the insertion ends with a paste marker so
 		// the cursor lands after the chip rather than inside it.
-		const needsSpace = /\[paste #\d+[^\]]*\]$/.test(replaced);
-		super.insertTextAtCursor(needsSpace ? `${replaced} ` : replaced);
+		super.insertTextAtCursor(
+			endsWithMarker(replaced) ? `${replaced} ` : replaced,
+		);
+	}
+
+	private patchHandlePaste(): void {
+		const self = this as unknown as PasteHandler;
+		const base = self.handlePaste.bind(self);
+		self.handlePaste = (pastedText: string) => {
+			const before = this.getText();
+			base(pastedText);
+			const after = this.getText();
+			// Only nudge a space when the paste collapsed into a marker chip;
+			// inline small pastes (no marker) are left untouched.
+			if (endsWithMarker(after) && after !== before) {
+				super.insertTextAtCursor(" ");
+			}
+		};
 	}
 
 	override render(width: number): string[] {

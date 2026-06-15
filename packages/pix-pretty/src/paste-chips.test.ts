@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { restyleMarkers } from "./paste-chips";
+import { endsWithMarker, restyleMarkers } from "./paste-chips";
 
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
@@ -130,5 +130,33 @@ describe("paste-chips width safety", () => {
 			const restyled = restyleMarkers(line, new Set());
 			expect(visibleWidth(restyled)).toBeLessThanOrEqual(terminalWidth);
 		});
+	});
+});
+
+// ─── endsWithMarker (trailing-space gate) ──────────────────────────────
+
+describe("paste-chips endsWithMarker", () => {
+	it("matches a chars marker at end of string", () => {
+		expect(endsWithMarker("[paste #1 2232 chars]")).toBe(true);
+	});
+
+	it("matches a lines marker at end of string", () => {
+		expect(endsWithMarker("hello [paste #2 +42 lines]")).toBe(true);
+	});
+
+	it("matches a bare marker at end of string", () => {
+		expect(endsWithMarker("[paste #3]")).toBe(true);
+	});
+
+	it("does not match when marker is not at the end", () => {
+		expect(endsWithMarker("[paste #1 58 chars] trailing")).toBe(false);
+	});
+
+	it("does not match plain text", () => {
+		expect(endsWithMarker("just some text")).toBe(false);
+	});
+
+	it("does not match a lone trailing space", () => {
+		expect(endsWithMarker(" ")).toBe(false);
 	});
 });
