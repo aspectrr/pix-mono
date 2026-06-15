@@ -4,7 +4,7 @@
  * Models drift toward improvising mid-session, forgetting they can ask the
  * user, search the web, pull library docs (context7), use LSP, or invoke an
  * Agent Skill instead of guessing. Fires on EVERY user prompt via
- * `before_agent_start`, emitted as ONE hidden message (`display: false`).
+ * `before_agent_start`, injected into the system prompt for the turn.
  *
  * Two modes:
  *   1. FIRST prompt of the session — an orientation block: a high-level
@@ -94,7 +94,7 @@ export function partitionTools(
  * Build the one-time orientation block shown on the FIRST prompt. Describes the
  * shape of the toolbelt (counts) and how to explore it via `toolbox`, plus the
  * sorted skill names so the model knows what exists by name without a dump of
- * descriptions (those live in the system prompt / are searchable via toolbox).
+ * descriptions (those live in the system prompt / are searchable via tools).
  */
 export function buildOrientation(
 	tools: ToolInfo[] | undefined,
@@ -181,12 +181,9 @@ export default function registerCapabilityNudge(pi: ExtensionAPI): void {
 			return; // no nudge this turn
 		}
 
-		return {
-			message: {
-				customType: "pix-capability-nudge",
-				content,
-				display: false,
-			},
-		};
+		const existing = event.systemPrompt ?? "";
+		const systemPrompt = existing ? `${existing}\n\n${content}` : content;
+
+		return { systemPrompt };
 	});
 }

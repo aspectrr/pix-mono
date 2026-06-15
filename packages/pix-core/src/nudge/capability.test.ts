@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
+import registerCapabilityNudge, {
 	buildOrientation,
 	CAPABILITY_REMINDER,
 	countInvocableSkills,
@@ -52,11 +52,9 @@ describe("CAPABILITY_REMINDER", () => {
 		expect(CAPABILITY_REMINDER).toContain("read_skills()");
 	});
 
-	test("points at /toolbox slash command for discovery (not a function call)", () => {
-		expect(CAPABILITY_REMINDER).toContain("/toolbox");
-		// must NOT imply toolbox is a callable function
+	test("does not mention user-only toolbox command", () => {
+		expect(CAPABILITY_REMINDER).not.toContain("/toolbox");
 		expect(CAPABILITY_REMINDER).not.toContain("toolbox(");
-		expect(CAPABILITY_REMINDER).toContain("function definitions");
 	});
 });
 
@@ -132,13 +130,11 @@ describe("buildOrientation", () => {
 		expect(out).toContain("2 skills");
 	});
 
-	test("explains how to use read_skills() and /toolbox for discovery", () => {
+	test("explains how to use read_skills() without user-only toolbox", () => {
 		const out = buildOrientation([tool("read", "builtin")], []);
 		expect(out).toContain("read_skills()");
-		expect(out).toContain("/toolbox");
-		// toolbox must NOT appear as a function call
+		expect(out).not.toContain("/toolbox");
 		expect(out).not.toContain("toolbox(");
-		expect(out.toLowerCase()).toMatch(/discover|enable/);
 	});
 
 	test("calls out gated tools and points at toolbox to enable them", () => {
@@ -153,7 +149,7 @@ describe("buildOrientation", () => {
 			["read", "grep"], // active set: 2 gated out
 		);
 		expect(out).toContain("2 are gated");
-		expect(out).toContain("enable via toolbox");
+		expect(out).toContain("function definitions");
 	});
 
 	test("singular phrasing when exactly one tool is gated", () => {
@@ -163,7 +159,7 @@ describe("buildOrientation", () => {
 			["read"],
 		);
 		expect(out).toContain("1 is gated");
-		expect(out).toContain("enable via toolbox");
+		expect(out).toContain("function definitions");
 	});
 
 	test("no gate line when nothing is gated", () => {
@@ -210,6 +206,33 @@ describe("buildOrientation", () => {
 		const last = out.trim().split("\n").at(-1) ?? "";
 		expect(last.toLowerCase()).toContain("not a task");
 		expect(last.toLowerCase()).toContain("do not reply");
+	});
+});
+
+describe("registerCapabilityNudge", () => {
+	test("injects orientation into system prompt, not a custom message", async () => {
+		let handler: ((event: { systemPrompt?: string }) => unknown) | undefined;
+		const pi = {
+			on(event: string, fn: typeof handler) {
+				if (event === "before_agent_start") handler = fn;
+			},
+			getAllTools() {
+				return [tool("read", "builtin")];
+			},
+			getActiveTools() {
+				return ["read"];
+			},
+		} as never;
+
+		registerCapabilityNudge(pi);
+		const result = (await handler?.({ systemPrompt: "BASE" })) as {
+			systemPrompt?: string;
+			message?: unknown;
+		};
+
+		expect(result.message).toBeUndefined();
+		expect(result.systemPrompt).toStartWith("BASE\n\nToolbelt:");
+		expect(result.systemPrompt).toContain("Orientation only");
 	});
 });
 

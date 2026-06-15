@@ -13,12 +13,11 @@
  *      (works when pi and the extension share the same install tree).
  */
 
+import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 
 const MODEL_COMMAND_LINE =
 	'{ name: "model", description: "Select model (opens selector UI)" },';
@@ -118,4 +117,4 @@ function escapeRegExp(text: string): string {
 }
 
 // Export for tests
-export { findSlashCommandsFile, candidatePaths };
+export { candidatePaths, findSlashCommandsFile };
