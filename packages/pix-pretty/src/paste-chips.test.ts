@@ -10,37 +10,41 @@ import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { restyleMarkers } from "./paste-chips";
 
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+
 // ─── restyleMarkers ──────────────────────────────────────────────────────────
 
 describe("paste-chips restyleMarkers", () => {
 	describe("text markers", () => {
-		it("restyles chars marker to text label", () => {
+		it("restyles chars marker to colored icon text chip", () => {
 			const result = restyleMarkers("[paste #1 2232 chars]", new Set());
-			expect(result).toBe("[paste text 2232 chars]");
+			expect(result).toContain("\x1b[");
+			expect(stripAnsi(result)).toBe("󰉿 text 2.2k chars");
 		});
 
-		it("restyles lines marker to text label", () => {
+		it("restyles lines marker to colored icon text chip", () => {
 			const result = restyleMarkers("[paste #2 +42 lines]", new Set());
-			expect(result).toBe("[paste text +42]");
+			expect(stripAnsi(result)).toBe("󰉿 text 42 lines");
 		});
 
-		it("restyles bare marker (no size info) to text label", () => {
+		it("restyles bare marker (no size info) to text chip with id", () => {
 			const result = restyleMarkers("[paste #3]", new Set());
-			expect(result).toBe("[paste text #3]");
+			expect(stripAnsi(result)).toBe("󰉿 text #3");
 		});
 	});
 
 	describe("image markers", () => {
-		it("restyles marker to image label when ID is in imageIds", () => {
+		it("restyles marker to colored icon image chip when ID is in imageIds", () => {
 			const imageIds = new Set([1]);
 			const result = restyleMarkers("[paste #1 58 chars]", imageIds);
-			expect(result).toBe("[paste image #1]");
+			expect(result).toContain("\x1b[");
+			expect(stripAnsi(result)).toBe("󰋩 image #1");
 		});
 
 		it("does not restyle non-image ID as image", () => {
 			const imageIds = new Set([1]);
 			const result = restyleMarkers("[paste #2 100 chars]", imageIds);
-			expect(result).toBe("[paste text 100 chars]");
+			expect(stripAnsi(result)).toBe("󰉿 text 100 chars");
 		});
 	});
 
@@ -50,8 +54,8 @@ describe("paste-chips restyleMarkers", () => {
 			const line =
 				"before [paste #1 58 chars] middle [paste #2 +10 lines] after";
 			const result = restyleMarkers(line, imageIds);
-			expect(result).toBe(
-				"before [paste image #1] middle [paste text +10] after",
+			expect(stripAnsi(result)).toBe(
+				"before 󰋩 image #1 middle 󰉿 text 10 lines after",
 			);
 		});
 	});
@@ -71,7 +75,7 @@ describe("paste-chips restyleMarkers", () => {
 		it("restyles markers embedded in ANSI sequences", () => {
 			const line = "\x1b[38;2;84;92;126m[paste #1 500 chars]\x1b[0m";
 			const result = restyleMarkers(line, new Set());
-			expect(result).toBe("\x1b[38;2;84;92;126m[paste text 500 chars]\x1b[0m");
+			expect(stripAnsi(result)).toBe("󰉿 text 500 chars");
 		});
 	});
 });
@@ -79,11 +83,10 @@ describe("paste-chips restyleMarkers", () => {
 // ─── Width safety (regression for crash) ─────────────────────────────────────
 
 describe("paste-chips width safety", () => {
-	it("restyling a chars marker can increase visible width", () => {
-		// This is the core issue: "#1" (2 chars) → "text" (4 chars) = +2 width
+	it("restyling a chars marker can decrease visible width", () => {
 		const original = "[paste #1 2232 chars]";
 		const restyled = restyleMarkers(original, new Set());
-		expect(visibleWidth(restyled)).toBeGreaterThan(visibleWidth(original));
+		expect(visibleWidth(restyled)).toBeLessThan(visibleWidth(original));
 	});
 
 	it("restyling a lines marker can decrease visible width", () => {
@@ -101,38 +104,31 @@ describe("paste-chips width safety", () => {
 		expect(visibleWidth(restyled)).not.toBe(visibleWidth(original));
 	});
 
-	it("chars marker with large char count widens by 2", () => {
-		// "[paste #N CCCC chars]" → "[paste text CCCC chars]"
-		// "#N" (2 chars for single digit) → "text" (4 chars) = exactly +2
+	it("chars marker with large char count compacts metadata", () => {
 		const original = "[paste #1 9999 chars]";
 		const restyled = restyleMarkers(original, new Set());
-		expect(visibleWidth(restyled) - visibleWidth(original)).toBe(2);
+		expect(stripAnsi(restyled)).toBe("󰉿 text 10k chars");
+		expect(visibleWidth(restyled)).toBeLessThan(visibleWidth(original));
 	});
 
-	it("chars marker with multi-digit ID has smaller delta", () => {
-		// "#10" (3 chars) → "text" (4 chars) = +1
+	it("chars marker with multi-digit ID omits id from text chip", () => {
 		const original = "[paste #10 9999 chars]";
 		const restyled = restyleMarkers(original, new Set());
-		expect(visibleWidth(restyled) - visibleWidth(original)).toBe(1);
+		expect(stripAnsi(restyled)).toBe("󰉿 text 10k chars");
+		expect(visibleWidth(restyled)).toBeLessThan(visibleWidth(original));
 	});
 
-	describe("reproduces crash scenario", () => {
-		it("restyled line exceeds terminal width without clamping", () => {
-			// Simulate the crash: a line at exactly terminal width (283)
-			// containing a marker that widens by 2 after restyling.
+	describe("width behavior", () => {
+		it("icon chip stays within terminal width when marker line fits", () => {
 			const terminalWidth = 283;
-			const marker = "[paste #1 2232 chars]"; // 21 chars
+			const marker = "[paste #1 2232 chars]";
 			const padding = " ".repeat(terminalWidth - visibleWidth(marker));
 			const line = marker + padding;
 
-			// Verify the original line fits
 			expect(visibleWidth(line)).toBe(terminalWidth);
 
-			// Restyle it — this WOULD exceed width without the fix
 			const restyled = restyleMarkers(line, new Set());
-			expect(visibleWidth(restyled)).toBeGreaterThan(terminalWidth);
-			// Specifically: "[paste text 2232 chars]" is 23 chars, +2 over original 21
-			expect(visibleWidth(restyled)).toBe(terminalWidth + 2);
+			expect(visibleWidth(restyled)).toBeLessThanOrEqual(terminalWidth);
 		});
 	});
 });

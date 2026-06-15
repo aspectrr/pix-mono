@@ -20,6 +20,7 @@ import type {
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, RST } from "./ansi.js";
 
 // Upstream stopped re-exporting `EditorFactory` from the package entry point,
 // so we reconstruct its signature locally from the still-exported primitives.
@@ -100,8 +101,8 @@ function replaceImagePaths(
 
 /**
  * Re-style every paste marker in a rendered line:
- *   image  → `[paste image #N]`
- *   text   → `[paste text +Lines]` or `[paste text Chars]`
+ *   image  → `󰋩 image #N` with blue icon/label
+ *   text   → `󰉿 text Lines lines` or `󰉿 text Chars chars` with green icon/label
  *
  * Width-preserving is not required — Pi re-wraps each render call.
  */
@@ -111,17 +112,34 @@ export function restyleMarkers(line: string, imageIds: Set<number>): string {
 		(_full, idStr, _g2, _g3, linesStr, charsStr) => {
 			const id = Number.parseInt(idStr, 10);
 			if (imageIds.has(id)) {
-				return `[paste image #${id}]`;
+				return chip(FG_BLUE, "󰋩", "image", `#${id}`);
 			}
 			if (linesStr) {
-				return `[paste text +${linesStr}]`;
+				return chip(FG_GREEN, "󰉿", "text", `${linesStr} lines`);
 			}
 			if (charsStr) {
-				return `[paste text ${charsStr} chars]`;
+				return chip(FG_GREEN, "󰉿", "text", `${compactNumber(charsStr)} chars`);
 			}
-			return `[paste text #${id}]`;
+			return chip(FG_GREEN, "󰉿", "text", `#${id}`);
 		},
 	);
+}
+
+function chip(
+	color: string,
+	icon: string,
+	label: string,
+	meta: string,
+): string {
+	return `${color}${BOLD}${icon} ${label}${RST}${FG_DIM} ${meta}${RST}`;
+}
+
+function compactNumber(raw: string): string {
+	const n = Number.parseInt(raw, 10);
+	if (!Number.isFinite(n)) return raw;
+	if (n < 1_000) return `${n}`;
+	if (n < 1_000_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+	return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
 }
 
 // ─── Custom editor ────────────────────────────────────────────────────────────
@@ -131,7 +149,11 @@ class ChipEditor extends CustomEditor {
 
 	override insertTextAtCursor(text: string): void {
 		const internals = this as unknown as EditorInternals;
-		super.insertTextAtCursor(replaceImagePaths(text, internals, this.imageIds));
+		const replaced = replaceImagePaths(text, internals, this.imageIds);
+		// Append a trailing space when the insertion ends with a paste marker so
+		// the cursor lands after the chip rather than inside it.
+		const needsSpace = /\[paste #\d+[^\]]*\]$/.test(replaced);
+		super.insertTextAtCursor(needsSpace ? `${replaced} ` : replaced);
 	}
 
 	override render(width: number): string[] {
