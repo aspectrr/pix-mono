@@ -102,5 +102,12 @@ Lay out capabilities so behavior inspectable, testable, safely self-correcting.
 - **Self-correcting**: never silent-mutate — propose diff → test → snapshot → approval for risky (§5). Critique post-exec (`verify`); builder ≠ reviewer (`review`).
 - **Self-remembering**: log why + failure modes → no repeat; version behaviors; runtime failure = next task.
 
+## 12. Karpathy Coding Principles
+Four failure modes LLMs default into ([Karpathy](https://x.com/karpathy/status/2015883857489522876), via `forrestchang/andrej-karpathy-skills`). Each reinforces a section above — apply them, don't relitigate them.
+- **Think before coding** (§4) — state assumptions explicitly; surface tradeoffs and inconsistencies; ask on ambiguity instead of picking silently; push back when a simpler approach exists; stop and name the confusion when confused.
+- **Simplicity first** (§10 YAGNI) — minimum code that solves the problem. No speculative abstraction, config, or error handling for impossible cases. The test: would a senior engineer call this overcomplicated? If yes, simplify.
+- **Surgical changes** (§1 SCOPE) — touch only what the task requires. No improving adjacent code, no refactoring what isn't broken, match existing style. Remove only the orphans *your* change created; flag pre-existing dead code, don't delete it. Every changed line traces to the request.
+- **Goal-driven execution** (§8) — turn imperative asks into verifiable targets before writing a line. "Add validation" → "write tests for invalid inputs, then make them pass." Strong success criteria let the loop run independently.
+
 ---
 *Directives define intent. Orchestration reasons. Execution runs. Gather first. Solve once. Keep it simple.*
