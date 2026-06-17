@@ -3,6 +3,10 @@
 # Symlink local workspace packages into Pi's extension node_modules so edits
 # in this repo are picked up instantly — no npm publish / reinstall round-trip.
 #
+# For packages that declare "pi.extensions", also patches settings.json so Pi
+# loads their extension entry. Packages without "pi.extensions" (lib packages
+# like pix-bash that are soft-loaded by pix-pretty) only need the symlink.
+#
 # Usage:
 #   scripts/dev-link.sh           # link repo packages into Pi
 #   scripts/dev-link.sh --unlink  # restore the real npm-installed copies
@@ -16,6 +20,7 @@ set -euo pipefail
 # Where Pi installs npm extensions. Override with PI_NPM_DIR if non-default.
 PI_NPM_DIR="${PI_NPM_DIR:-$HOME/.pi/agent/npm}"
 TARGET_DIR="${PI_NPM_DIR}/node_modules/@xynogen"
+SETTINGS_FILE="${HOME}/.pi/agent/settings.json"
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
 packages_dir="${repo_root}/packages"
@@ -31,6 +36,59 @@ unlink=false
 
 linked=0
 restored=0
+registered=0
+unregistered=0
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+# Returns 0 if package.json has pi.extensions OR pi.themes (needs settings.json entry).
+has_pi_extensions() {
+	node -e "
+const p = require('$1');
+const hasExt = p.pi && Array.isArray(p.pi.extensions) && p.pi.extensions.length > 0;
+const hasTheme = p.pi && (typeof p.pi.themes === 'string' || Array.isArray(p.pi.themes));
+process.exit((hasExt || hasTheme) ? 0 : 1);
+" 2>/dev/null
+}
+
+# Add "npm:<name>" to settings.json packages array if not already present.
+settings_add() {
+	local spec="npm:$1"
+	[ -f "$SETTINGS_FILE" ] || return
+	node -e "
+const fs = require('fs');
+const f = '$SETTINGS_FILE';
+const s = JSON.parse(fs.readFileSync(f, 'utf8'));
+if (!Array.isArray(s.packages)) s.packages = [];
+if (!s.packages.includes('$spec')) {
+  s.packages.push('$spec');
+  fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
+  process.exit(0);
+}
+process.exit(1);
+" 2>/dev/null && return 0 || return 1
+}
+
+# Remove "npm:<name>" from settings.json packages array.
+settings_remove() {
+	local spec="npm:$1"
+	[ -f "$SETTINGS_FILE" ] || return
+	node -e "
+const fs = require('fs');
+const f = '$SETTINGS_FILE';
+const s = JSON.parse(fs.readFileSync(f, 'utf8'));
+if (!Array.isArray(s.packages)) process.exit(1);
+const before = s.packages.length;
+s.packages = s.packages.filter(p => p !== '$spec');
+if (s.packages.length < before) {
+  fs.writeFileSync(f, JSON.stringify(s, null, 2) + '\n');
+  process.exit(0);
+}
+process.exit(1);
+" 2>/dev/null && return 0 || return 1
+}
+
+# ── main loop ─────────────────────────────────────────────────────────────────
 
 for dir in "$packages_dir"/*/; do
 	pkg_json="${dir}package.json"
@@ -40,13 +98,22 @@ for dir in "$packages_dir"/*/; do
 	# Strip the @xynogen/ scope to get the dir name under @xynogen.
 	short="${name#@xynogen/}"
 	dest="${TARGET_DIR}/${short}"
+	needs_registration=false
+	has_pi_extensions "$pkg_json" && needs_registration=true
 
 	if [ "$unlink" = true ]; then
 		# Only restore entries we previously symlinked.
 		if [ -L "$dest" ]; then
 			rm "$dest"
-			echo "↩ unlinked ${name} (run 'pi install npm:${name}' to restore the npm copy)"
+			echo "↩ unlinked ${name}"
 			restored=$((restored + 1))
+		fi
+		# Remove from settings.json if it was registered.
+		if [ "$needs_registration" = true ]; then
+			if settings_remove "$name"; then
+				echo "  ✖ removed ${name} from settings.json"
+				unregistered=$((unregistered + 1))
+			fi
 		fi
 		continue
 	fi
@@ -56,11 +123,21 @@ for dir in "$packages_dir"/*/; do
 	ln -s "${dir%/}" "$dest"
 	echo "→ linked ${name} → ${dir%/}"
 	linked=$((linked + 1))
+
+	# Register in settings.json if the package has extension entries.
+	if [ "$needs_registration" = true ]; then
+		if settings_add "$name"; then
+			echo "  ✔ registered ${name} in settings.json"
+			registered=$((registered + 1))
+		fi
+	fi
 done
 
 echo ""
 if [ "$unlink" = true ]; then
-	echo "Restored ${restored} package(s). Restart your Pi session to reload."
+	echo "Restored ${restored} package(s), removed ${unregistered} from settings.json."
+	echo "Restart your Pi session to reload."
 else
-	echo "Linked ${linked} package(s). Restart your Pi session to reload."
+	echo "Linked ${linked} package(s), registered ${registered} new in settings.json."
+	echo "Restart your Pi session to reload."
 fi
