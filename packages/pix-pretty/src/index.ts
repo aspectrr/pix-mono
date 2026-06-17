@@ -32,13 +32,7 @@ import type {
 	ReadToolInput,
 	WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
-import { registerBashTool } from "@xynogen/pix-bash";
-import { registerEditTool } from "@xynogen/pix-edit";
-import { registerFindTool } from "@xynogen/pix-find";
-import { registerGrepTool } from "@xynogen/pix-grep";
-import { registerLsTool } from "@xynogen/pix-ls";
-import { registerReadTool } from "@xynogen/pix-read";
-import { registerWriteTool } from "@xynogen/pix-write";
+
 import { registerFffCommands } from "./commands/fff.js";
 import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import {
@@ -222,29 +216,55 @@ export default function piPrettyExtension(
 		cursorStore,
 	};
 
-	// ── Register tools ──────────────────────────────────────────────────
+	// ── Register tools (soft-loaded from optional pix-* packages) ────────
+	// Each tool package is an optionalDependency. Dynamic import breaks the
+	// static dep cycle: pix-* tools depend on pix-pretty for the render lib,
+	// pix-pretty soft-loads them at runtime — neither sees the other at build
+	// time. Missing package → leave pi built-in tool in place, no crash.
 
-	if (isToolEnabled("read") && createReadTool) {
-		registerReadTool(pi, createReadTool, toolCtx);
-	}
-	if (isToolEnabled("bash") && createBashTool) {
-		registerBashTool(pi, createBashTool, toolCtx);
-	}
-	if (isToolEnabled("ls") && createLsTool) {
-		registerLsTool(pi, createLsTool, toolCtx);
-	}
-	if (isToolEnabled("find") && createFindTool) {
-		registerFindTool(pi, createFindTool, toolCtx);
-	}
-	if (isToolEnabled("grep") && createGrepTool) {
-		registerGrepTool(pi, createGrepTool, toolCtx);
-	}
-	if (isToolEnabled("edit") && createEditTool) {
-		registerEditTool(pi, createEditTool, toolCtx, trackInvalidator);
-	}
-	if (isToolEnabled("write") && createWriteTool) {
-		registerWriteTool(pi, createWriteTool, toolCtx, trackInvalidator);
-	}
+	type RegisterFn = (...args: unknown[]) => void;
+	const toolPkgs: Array<{
+		name: string;
+		pkg: string;
+		factory: unknown;
+		extra?: unknown;
+	}> = [
+		{ name: "read", pkg: "@xynogen/pix-read", factory: createReadTool },
+		{ name: "bash", pkg: "@xynogen/pix-bash", factory: createBashTool },
+		{ name: "ls", pkg: "@xynogen/pix-ls", factory: createLsTool },
+		{ name: "find", pkg: "@xynogen/pix-find", factory: createFindTool },
+		{ name: "grep", pkg: "@xynogen/pix-grep", factory: createGrepTool },
+		{
+			name: "edit",
+			pkg: "@xynogen/pix-edit",
+			factory: createEditTool,
+			extra: trackInvalidator,
+		},
+		{
+			name: "write",
+			pkg: "@xynogen/pix-write",
+			factory: createWriteTool,
+			extra: trackInvalidator,
+		},
+	];
+
+	void (async () => {
+		for (const { name, pkg, factory, extra } of toolPkgs) {
+			if (!isToolEnabled(name) || !factory) continue;
+			try {
+				const mod = (await import(pkg)) as Record<string, unknown>;
+				const regName = `register${name[0].toUpperCase()}${name.slice(1)}Tool`;
+				const register = (mod[regName] ?? mod.default) as
+					| RegisterFn
+					| undefined;
+				if (!register) continue;
+				if (extra !== undefined) register(pi, factory, toolCtx, extra);
+				else register(pi, factory, toolCtx);
+			} catch {
+				/* package not installed — pi built-in tool stays active */
+			}
+		}
+	})();
 
 	// ── Register FFF commands ───────────────────────────────────────────
 
