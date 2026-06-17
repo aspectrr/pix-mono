@@ -19,15 +19,27 @@ SETTINGS_FILE="$PI_ROOT/settings.json"
 DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "search", "fetch", "transcribe", "ask_user", "todo", "read_skills", "ast_grep_search", "ast_grep_replace", "lsp_navigation", "lsp_diagnostics", "lens_diagnostics"]'
 
 # Space-separated package list (POSIX sh has no arrays).
+# Order matters: dependencies before dependents.
 PIX_PACKAGES="
-npm:@xynogen/pix-core
-npm:@xynogen/pix-pretty
-npm:@xynogen/pix-optimizer
+npm:@xynogen/pix-data
 npm:@xynogen/pix-skills
 npm:@xynogen/pix-tokyo-night
+npm:@xynogen/pix-optimizer
 npm:@xynogen/pix-9router
-npm:@xynogen/pix-data
+npm:@xynogen/pix-pretty
+npm:@xynogen/pix-bash
+npm:@xynogen/pix-read
+npm:@xynogen/pix-write
+npm:@xynogen/pix-edit
+npm:@xynogen/pix-find
+npm:@xynogen/pix-grep
+npm:@xynogen/pix-ls
+npm:@xynogen/pix-todo
+npm:@xynogen/pix-ask
+npm:@xynogen/pix-toolbox
+npm:@xynogen/pix-sudo-run
 npm:@xynogen/pix-sudo
+npm:@xynogen/pix-core
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
