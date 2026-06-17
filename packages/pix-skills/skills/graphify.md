@@ -51,7 +51,7 @@ python3 -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf
 echo "$(cd . && pwd)" > graphify-out/.graphify_root
 ```
 
-If the import succeeds, print nothing and move straight to Step 2. If it prints the install message, stop and tell the user to install graphify (see https://github.com/safishamsi/graphify) before retrying — do not attempt to install it yourself.
+If the import succeeds, print nothing and move straight to Step 2. If it prints the install message, stop and tell the user to install graphify (see <https://github.com/safishamsi/graphify>) before retrying — do not attempt to install it yourself.
 
 **In every subsequent bash block, replace `python3` with `$(cat graphify-out/.graphify_python)` to use the correct interpreter.**
 
@@ -80,6 +80,7 @@ Corpus: X files · ~Y words
 Omit any category with 0 files.
 
 Then act on it:
+
 - If `total_files` is 0: stop with "No supported files found in [path]."
 - If `skipped_sensitive` is non-empty: mention file count skipped, not file names.
 - If `total_words` > 2,000,000 OR `total_files` > 500: show the warning, compute top 5 subdirectories by file count, ask which to run on.
@@ -214,6 +215,7 @@ Output JSON:
 **For each batch:**
 
 1. Read the files:
+
    ```
    read file1.md
    read file2.md
@@ -225,6 +227,7 @@ Output JSON:
 3. Write the chunk JSON to `graphify-out/.graphify_chunk_NN.json` (zero-padded, 2 digits).
 
 4. Print progress:
+
    ```
    Batch 1/N: extracted X nodes, Y edges from [file names]
    ```
@@ -420,6 +423,46 @@ Replace `LABELS_DICT` with the actual dict (e.g. `{0: "Attention Mechanism", 1: 
 graphify export html
 ```
 
+### Step 7 - Patch HTML: add hyperedge hull toggle
+
+The generated HTML renders hyperedge hulls as filled convex polygons. When nodes are spread far apart by the force-directed layout, these become large blade-shaped artifacts. Patch the file to add a checkbox that toggles hull visibility (off by default).
+
+**Find this block** in `graphify-out/graph.html`:
+
+```html
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+    </div>
+```
+
+**Replace with:**
+
+```html
+    <div id="legend-controls">
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+      <label><input type="checkbox" id="hulls-cb" onchange="setHullsVisible(this.checked)">Hyperedge hulls</label>
+    </div>
+```
+
+**Then find** the `afterDrawing` handler (near bottom of `<script>`):
+
+```js
+network.on('afterDrawing', function(ctx) {
+    hyperedges.forEach(h => {
+```
+
+**Replace with:**
+
+```js
+let _hullsVisible = false;
+function setHullsVisible(v) { _hullsVisible = v; network.redraw(); }
+network.on('afterDrawing', function(ctx) {
+    if (!_hullsVisible) return;
+    hyperedges.forEach(h => {
+```
+
+Do this with two `edit` calls (exact string replacement). The checkbox appears in the legend controls bar; hulls are hidden by default and render on demand.
+
 ### Step 9 - Save manifest, update cost tracker, clean up
 
 ```bash
@@ -458,6 +501,7 @@ rm -f graphify-out/.needs_update graphify-out/.graphify_batches.json 2>/dev/null
 ```
 
 Tell the user:
+
 ```
 Graph complete. Outputs in graphify-out/
 
@@ -467,6 +511,7 @@ Graph complete. Outputs in graphify-out/
 ```
 
 Then paste these sections from GRAPH_REPORT.md:
+
 - God Nodes
 - Surprising Connections
 - Suggested Questions
