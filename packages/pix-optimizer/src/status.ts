@@ -53,12 +53,12 @@ export const TOOL_ICONS: Record<OptimizerTool, string> = {
 };
 
 /** Fixed left-to-right order of icons in the cell. */
-export const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon"];
+const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon"];
 
 /** Theme color for enabled icons. */
-export const ENABLED_COLOR: ThemeColor = "accent";
+const ENABLED_COLOR: ThemeColor = "accent";
 /** Theme color for disabled icons. */
-export const DISABLED_COLOR: ThemeColor = "dim";
+const DISABLED_COLOR: ThemeColor = "dim";
 
 /** Colorizer: maps a (theme color, text) pair to a rendered string. */
 export type Colorize = (color: ThemeColor, text: string) => string;

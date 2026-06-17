@@ -37,7 +37,7 @@ export const LEVEL_NUMBERS: Record<string, Level> = {
 	"3": "ultra",
 };
 
-export const CAVEMAN_COMMAND_OPTIONS = [
+const CAVEMAN_COMMAND_OPTIONS = [
 	{ value: "1", label: "1 (lite)", description: "Professional, no fluff" },
 	{ value: "2", label: "2 (full)", description: "Classic caveman" },
 	{ value: "3", label: "3 (ultra)", description: "Maximum compression" },
@@ -172,7 +172,7 @@ export const DEFAULT_CONFIG: CavemanConfig = {
 	showStatus: true,
 };
 
-export const CONFIG_PATH = join(homedir(), ".pi", "agent", "caveman.json");
+const CONFIG_PATH = join(homedir(), ".pi", "agent", "caveman.json");
 
 export function parseConfig(raw: unknown): CavemanConfig {
 	const parsed = raw as Record<string, unknown>;
@@ -189,7 +189,7 @@ export function parseConfig(raw: unknown): CavemanConfig {
 
 let _saveQueue: Promise<void> = Promise.resolve();
 
-export async function loadConfig(): Promise<CavemanConfig> {
+async function loadConfig(): Promise<CavemanConfig> {
 	try {
 		const raw = await readFile(CONFIG_PATH, "utf8");
 		return parseConfig(JSON.parse(raw));
@@ -198,7 +198,7 @@ export async function loadConfig(): Promise<CavemanConfig> {
 	}
 }
 
-export async function saveConfig(config: CavemanConfig): Promise<void> {
+async function saveConfig(config: CavemanConfig): Promise<void> {
 	const snapshot = `${JSON.stringify(config, null, 2)}\n`;
 	_saveQueue = _saveQueue.then(async () => {
 		await mkdir(join(homedir(), ".pi", "agent"), { recursive: true });
