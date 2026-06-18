@@ -159,6 +159,7 @@ Each package is intended to be **independently installable and usable**.
 
 - **Never commit directly without running `bun run check` + `bun run typecheck`** — CI will fail.
 - **Never push a tag without bumping the version** in the package(s) you changed — publish skips already-published versions.
+- **Default version bumps to PATCH only.** Agents may bump the patch field (`x.y.Z`) freely. **Minor (`x.Y.0`) and major (`X.0.0`) bumps require explicit user approval** before applying — never bump minor/major on your own initiative.
 - **Do not add `/toolbox` references in agent-facing text** — `/toolbox` is a user slash command, not model-callable.
 - **Scripts are idempotent** — safe to re-run `dev-link.sh`, `publish-all.sh`.
 - All packages are ESM (`"type": "module"`), target ES2022.
