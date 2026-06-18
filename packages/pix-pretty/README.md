@@ -23,10 +23,10 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 
 ### Reasoning Tag Rendering
 
-- **Live streaming** - Re-renders `<think>`/`<thinking>` blocks as styled blockquotes token-by-token during streaming
-- **Finalized cleanup** - On `message_end`, reformats all reasoning blocks with visual markers for persistence
+- **Live streaming** - Splits `<think>`/`<thinking>` regions into native Pi `thinking` content blocks token-by-token during streaming
+- **Finalized cleanup** - On `message_end`, re-splits every affected text block for persistence (the finalized message bypasses the live rebuild)
 - **Partial-tag safety** - Strips trailing half-streamed tags (e.g. `<thin`) so they never flash as literal text
-- **Visual distinction** - Uses blockquote style to clearly separate reasoning from response
+- **Visual distinction** - Uses Pi's native `thinking` block rendering (dim + italic via `thinkingText` theme token) — no ANSI injection, no markdown blockquote shim
 
 ## Installation
 
@@ -41,7 +41,7 @@ pi install npm:@xynogen/pix-pretty
 **Tool rendering:**
 
 - `PRETTY_THEME` - Color theme for syntax highlighting
-- `PRETTY_MAX_HL_CHARS` - Max characters to highlight (default: 50000)
+- `PRETTY_MAX_HL_CHARS` - Max characters to highlight (default: 80000)
 - `PRETTY_MAX_PREVIEW_LINES` - Max lines in preview output
 - `PRETTY_CACHE_LIMIT` - FFF cache size limit
 - `PRETTY_ICONS` - Enable/disable file icons
@@ -53,8 +53,9 @@ pi install npm:@xynogen/pix-pretty
 
 This package combines two rendering systems:
 
-1. **Tool output rendering** (`src/index.ts`) - Intercepts read/bash/ls/find/grep tools (standalone tool packages pix-bash/read/write/edit/find/grep/ls are loaded dynamically when installed)
-2. **Paste chip formatting** (`src/paste-chips.ts`) - Custom editor component for paste markers
+1. **Theme + FFF commands** (`src/index.ts`) - Initialises syntax-highlight theme from Pi settings, clears highlight cache, and registers FFF slash commands. Tool renderers live in the standalone `pix-{read,bash,ls,find,grep,edit,write}` packages — each self-registers via its own Pi extension entry point.
+2. **Paste chip formatting** (`src/paste-chips.ts`) - Custom editor component for paste markers.
+3. **Reasoning tag rendering** (`src/thinking.ts`) - Converts leaked `<think>`/`<thinking>` tags into native Pi `thinking` content blocks (dim + italic via `thinkingText` theme token).
 
 Both work independently but complement each other for a cohesive visual experience.
 
@@ -68,7 +69,7 @@ Key divergences from upstream:
 2. **FFF state dir** - `~/.pi/agent/pi-pretty/fff` → `~/.cache/pi/fff` (XDG cache)
 3. **Split diff view for edit/write tools** - Full side-by-side diff with gutter, line numbers, syntax highlighting
 4. **Paste chip formatting** - Custom editor component for Pi's paste marker system (not in upstream)
-5. **Reasoning tag rendering** - Collapsible `<think>`/`<thinking>` blocks (not in upstream)
+5. **Reasoning tag rendering** - Converts leaked `<think>`/`<thinking>` tags into native Pi `thinking` content blocks (not in upstream)
 
 Paste chip formatting and reasoning tag rendering are original additions with no upstream equivalent.
 

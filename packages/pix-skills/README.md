@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 21 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 22 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
@@ -34,6 +34,7 @@ Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skil
 | `debug` | auto — bug / error / doesn't work |
 | `explain` | auto — explain / how does |
 | `finish` | manual |
+| `graphify` | auto — codebase question / architecture |
 | `handoff` | manual |
 | `plan` | auto — plan / design / architect |
 | `readme` | manual |
