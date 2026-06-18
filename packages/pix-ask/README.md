@@ -12,12 +12,6 @@ Registers the `ask_user` tool in Pi. When the agent needs to resolve ambiguous r
 pi install npm:@xynogen/pix-ask
 ```
 
-> Also included in [`@xynogen/pix-core`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-core):
->
-> ```bash
-> pi install npm:@xynogen/pix-core
-> ```
-
 ## Full distro
 
 To install the complete pix suite (all packages + Pi itself):

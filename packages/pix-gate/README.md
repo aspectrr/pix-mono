@@ -12,12 +12,6 @@ Intercepts every `bash` tool call and classifies the command against a set of se
 pi install npm:@xynogen/pix-gate
 ```
 
-> Also included in [`@xynogen/pix-core`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-core):
->
-> ```bash
-> pi install npm:@xynogen/pix-core
-> ```
-
 ## Configuration
 
 `~/.pi/agent/pix-gate.json`:

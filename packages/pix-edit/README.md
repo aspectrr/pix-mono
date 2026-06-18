@@ -12,12 +12,6 @@ Replaces Pi's default `edit` tool with an enhanced version that renders a side-b
 pi install npm:@xynogen/pix-edit
 ```
 
-> Also included in [`@xynogen/pix-core`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-core):
->
-> ```bash
-> pi install npm:@xynogen/pix-core
-> ```
-
 ## Full distro
 
 To install the complete pix suite (all packages + Pi itself):
