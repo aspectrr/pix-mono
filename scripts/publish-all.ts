@@ -94,28 +94,12 @@ async function publishOne(pkg: PkgInfo): Promise<void> {
 			return;
 		}
 		if (out.includes("EOTP") || out.includes("one-time password") || out.includes("E401") || out.includes("Unauthorized")) {
-			console.error(`\n✖ Auth required. Running npm login...`);
-			try {
-				const login = Bun.spawn(["npm", "login"], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-				const loginCode = await login.exited;
-				if (loginCode !== 0) throw new Error("npm login exited with code " + loginCode);
-			} catch {
-				console.error("Login failed or cancelled. Aborting.");
-				process.exit(1);
-			}
-			// Retry once after login
-			try {
-				const retry = await $`npm publish ${PUBLISH_FLAGS}`.cwd(dir).quiet();
-				if (DRY_RUN) console.log(retry.stdout.toString());
-				console.log(`✔ published ${name}@${version}`);
-				publishedCount++;
-			} catch (e2) {
-				const out2 = (e2 as { stderr?: Buffer | string }).stderr?.toString() ?? "";
-				console.error(`✖ failed ${name}@${version} after re-login`);
-				console.error(out2);
-				failedCount++;
-			}
-			return;
+			console.error(`\n✖ Auth error: npm requires an automation token to publish with 2FA enabled.`);
+			console.error(`\nCreate one at: https://www.npmjs.com/settings/xynogen/tokens`);
+			console.error(`  1. Generate New Token → Granular Access Token (or Classic → Automation)`);
+			console.error(`  2. Set it:  npm set //registry.npmjs.org/:_authToken YOUR_TOKEN`);
+			console.error(`  3. Re-run:  bun run publish:all\n`);
+			process.exit(1);
 		}
 		console.error(`✖ failed ${name}@${version}`);
 		console.error(out);
