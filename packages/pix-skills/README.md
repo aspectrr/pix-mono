@@ -15,6 +15,7 @@ Pi loads skill *descriptions* into the system prompt at startup (progressive dis
 only enters context when the agent calls `read_skill(name=<skill>)` — or reads the file via the `read` tool.
 
 `read_skill` is the safe version of "agent prompts itself":
+
 - Agent calls tool explicitly — no autonomous injection
 - Orchestrator (user or system prompt) decides when skill loading is appropriate
 - Auditable: tool call is visible in the conversation
@@ -61,13 +62,21 @@ read_skill(name="commit")
 ## Install
 
 ```bash
-pi install git:github.com/xynogen/pix-mono#packages/pix-skills
+pi install npm:@xynogen/pix-skills
 ```
 
 Or from the monorepo:
 
 ```bash
 pi install ./packages/pix-skills
+```
+
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

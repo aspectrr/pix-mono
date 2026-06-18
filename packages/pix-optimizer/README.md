@@ -78,7 +78,7 @@ npm i -g @toon-format/cli
 ## Installation
 
 ```bash
-pi install git:github.com/xynogen/pix-optimizer
+pi install npm:@xynogen/pix-optimizer
 ```
 
 ## Architecture
@@ -116,6 +116,14 @@ This package was built by merging two upstream Pi community packages:
 Both upstreams are MIT licensed. Neither codebase was copied directly — the logic was
 rewritten and combined into a single extension with a unified `/opt` command and shared status bar.
 This package does not sync back to either upstream.
+
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+```
 
 ## License
 

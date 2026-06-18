@@ -6,16 +6,59 @@ Monorepo of [Pi Coding Agent](https://github.com/badlogic/pi-mono) extensions by
 
 ## Packages
 
+### Foundation
+
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router provider + fetch/search tools via router API |
-| [`@xynogen/pix-core`](packages/pix-core) | Core UI/UX bundle (welcome banner, footer, model picker, self-update) |
 | [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (models.dev + BenchLM), cached at `~/.cache/pi` |
-| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Performance suite — caveman mode + RTK tool rewriting + jq/TOON JSON compression |
 | [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
-| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skill` tool + bundled skills) |
-| [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` tool — executes root commands after interactive password prompt (PAM via `sudo -S`) |
+| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skill` tool + 21 bundled skills) |
 | [`@xynogen/pix-tokyo-night`](packages/pix-tokyo-night) | Tokyo Night Storm theme |
+
+### Providers
+
+| Package | Description |
+| --- | --- |
+| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools via router API |
+
+### Tool replacements
+
+Drop-in replacements for Pi's built-in tools with pretty output via `pix-pretty`.
+
+| Package | Description |
+| --- | --- |
+| [`@xynogen/pix-bash`](packages/pix-bash) | `bash` — shell execution with framed output block and exit-code summary |
+| [`@xynogen/pix-read`](packages/pix-read) | `read` — file read with syntax highlighting and image metadata |
+| [`@xynogen/pix-write`](packages/pix-write) | `write` — file write with split-diff rendering on overwrite |
+| [`@xynogen/pix-edit`](packages/pix-edit) | `edit` — precise text replacement with side-by-side diff per edit |
+| [`@xynogen/pix-find`](packages/pix-find) | `find` — glob search with FFF acceleration and file icons |
+| [`@xynogen/pix-grep`](packages/pix-grep) | `grep` — pattern search with FFF-prioritised results |
+| [`@xynogen/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
+| [`@xynogen/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
+| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
+| [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution with PAM password overlay, blocked in non-interactive mode |
+
+### Extensions
+
+| Package | Description |
+| --- | --- |
+| [`@xynogen/pix-welcome`](packages/pix-welcome) | ASCII π banner + startup health checks (version, auth, gitignore) |
+| [`@xynogen/pix-footer`](packages/pix-footer) | Status bar — mode, git branch, model, tokens, cost, live TPS |
+| [`@xynogen/pix-models`](packages/pix-models) | `/models` — enhanced model picker with BenchLM rank, context window, cost |
+| [`@xynogen/pix-update`](packages/pix-update) | `/update` — self-update Pi + all extensions, detects install method |
+| [`@xynogen/pix-commands`](packages/pix-commands) | `/diff` and `/clear` slash commands |
+| [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search tool picker, enable/disable tools from prompt |
+| [`@xynogen/pix-nudge`](packages/pix-nudge) | Tools nudge + capability nudge hooks to steer model toward correct tools |
+| [`@xynogen/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget (errors + warnings across session files) |
+| [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — `AGENTS.md` baseline + repo directive files |
+| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+
+### Bundle
+
+| Package | Description |
+| --- | --- |
+| [`@xynogen/pix-core`](packages/pix-core) | Meta-package — installs the full core UI/UX suite in one command |
 
 ## Install
 

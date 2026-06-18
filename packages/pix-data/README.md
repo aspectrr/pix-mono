@@ -19,12 +19,20 @@ Pi coding agent extension — shared model data layer. Fetches and caches [model
 ## Install
 
 ```bash
-pi install git:github.com/xynogen/pix-data
+pi install npm:@xynogen/pix-data
 ```
 
 ## How it works
 
 On session start the extension fires two parallel background fetches (`modelsDev.get()` + `benchmark.get()`). If the cache is fresh the fetches are skipped. Both cache files live in `~/.cache/pi/` — any Pi extension using the same `DataSource` + cache paths will share data automatically.
+
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+```
 
 ## License
 

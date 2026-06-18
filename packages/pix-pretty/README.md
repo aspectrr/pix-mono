@@ -5,6 +5,7 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 ## Features
 
 ### Tool Output Rendering
+
 - **Syntax highlighting** - Uses `cli-highlight` (highlight.js-backed) for code blocks
 - **File icons** - Visual file type indicators in ls/find output
 - **Tree views** - Hierarchical directory display
@@ -14,12 +15,14 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 - **Bash exit summary** - Command status and timing info
 
 ### Paste Chip Formatting
+
 - **Image path collapsing** - Converts `/tmp/pi-clipboard-abc.png` → `[paste image #1]`
 - **Text paste markers** - Long pasted text → `[paste text +42 lines]`
 - **Atomic deletion** - Delete entire paste markers as single units
 - **Type-aware labels** - Visual distinction between image and text pastes
 
 ### Reasoning Tag Rendering
+
 - **Collapsible display** - Renders leaked `<think>`/`<thinking>` tags as collapsible HTML details blocks
 - **Visual distinction** - Uses ⚙ icon to clearly mark reasoning content
 - **Non-intrusive** - Only processes finalized messages, no live mutation
@@ -28,7 +31,7 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 ## Installation
 
 ```bash
-pi install git:github.com/xynogen/pix-pretty
+pi install npm:@xynogen/pix-pretty
 ```
 
 ## Configuration
@@ -36,6 +39,7 @@ pi install git:github.com/xynogen/pix-pretty
 ### Environment Variables
 
 **Tool rendering:**
+
 - `PRETTY_THEME` - Color theme for syntax highlighting
 - `PRETTY_MAX_HL_CHARS` - Max characters to highlight (default: 50000)
 - `PRETTY_MAX_PREVIEW_LINES` - Max lines in preview output
@@ -68,6 +72,14 @@ Key divergences from upstream:
 
 Paste chip formatting and reasoning tag rendering are original additions with no upstream equivalent.
 
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+```
+
 ## License
 
-MIT - See LICENSE file
+MIT

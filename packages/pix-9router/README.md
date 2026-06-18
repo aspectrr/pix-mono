@@ -13,7 +13,7 @@ Pi coding agent extension — **9Router provider** + **fetch** and **search** to
 ## Install
 
 ```bash
-pi install git:github.com/xynogen/pix-9router
+pi install npm:@xynogen/pix-9router
 ```
 
 ## Environment
@@ -34,6 +34,14 @@ export ROUTER_API_KEY="your-key-here"
 
 - **Provider**: on load, fetches `/models` from the router and registers them with Pi. [models.dev](https://models.dev/api.json) is used internally to fill missing context window / modality fields where the router response omits them. Model list is cached at `~/.cache/pi/9router.json` (TTL 1h).
 - **fetch / search**: POST to `/web/fetch` and `/search` on the router (which proxies to exa). If the router is unreachable, falls back to raw `curl`.
+
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+```
 
 ## License
 

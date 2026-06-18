@@ -21,15 +21,18 @@ Pi coding agent extension — core UI/UX bundle.
 ## Install
 
 ```bash
-pi install git:github.com/xynogen/pix-core
+pi install npm:@xynogen/pix-core
 ```
 
-> **Requires** [pix-data](https://github.com/xynogen/pix-data) for shared models.dev + BenchLM cache.
-> Install both:
-> ```bash
-> pi install git:github.com/xynogen/pix-data
-> pi install git:github.com/xynogen/pix-core
-> ```
+> Includes the core pix UI/UX packages and installs their dependencies.
+
+## Full distro
+
+To install the complete pix suite (all packages + Pi itself):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+```
 
 ## License
 
