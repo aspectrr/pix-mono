@@ -8,15 +8,12 @@ import {
 	type KeybindingsManager,
 	Markdown,
 	matchesKey,
-	Spacer,
-	Text,
 	type TUI,
 	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-
-import { dim, TabBar } from "./components.js";
-import { safeMarkdownTheme, scrollIndicator, sentinelsFor } from "./helpers.js";
+import { dim } from "./components.js";
+import { safeMarkdownTheme, sentinelsFor } from "./helpers.js";
 import type { OptionData, Params, QuestionData } from "./schema.js";
 import {
 	SENTINEL_CHAT,
@@ -62,7 +59,6 @@ export class AskQuestionnaire extends Container {
 		this.theme = theme;
 		this.keybindings = keybindings;
 		this.onDone = onDone;
-		this.renderLayout();
 	}
 
 	// ── Accessors ──────────────────────────────────────────────────────
@@ -106,53 +102,6 @@ export class AskQuestionnaire extends Container {
 
 	// ── Layout ─────────────────────────────────────────────────────────
 
-	override invalidate(): void {
-		super.invalidate();
-	}
-
-	renderLayout(): void {
-		this.clear();
-		const t = this.theme;
-
-		this.addChild(new Text("", 0, 0));
-
-		if (this.params.questions.length > 1) {
-			this.addChild(new TabBar(this.params.questions, this.currentIndex, t));
-		}
-
-		const q = this.currentQ;
-		const chip = t.fg("accent", t.bold(q.header));
-		const prog =
-			this.params.questions.length > 1
-				? dim(t)(
-						scrollIndicator(this.currentIndex, this.params.questions.length),
-					)
-				: "";
-		this.addChild(new Text(`${chip}${prog}`, 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(t.fg("text", t.bold(q.question)), 1, 0));
-		this.addChild(new Spacer(1));
-
-		if (!q.multiSelect && !this.inputMode) {
-			const searchVal = this.searchQuery
-				? t.fg("text", this.searchQuery)
-				: t.fg("dim", "type to filter");
-			this.addChild(
-				new Text(`${t.fg("accent", "Filter:")} ${searchVal}`, 1, 0),
-			);
-		}
-
-		this.addChild(new Spacer(1));
-
-		if (this.inputMode) {
-			this.addChild(this.ensureEditor());
-		}
-
-		this.addChild(new Spacer(1));
-		this.addChild(this._buildHintText());
-		this.addChild(new Text("", 0, 0));
-	}
-
 	private ensureEditor(): Editor {
 		if (this.editor) return this.editor;
 		const editor = new Editor(this.tui, {
@@ -170,30 +119,6 @@ export class AskQuestionnaire extends Container {
 		editor.focused = true;
 		this.editor = editor;
 		return editor;
-	}
-
-	private _buildHintText(): Text {
-		const t = this.theme;
-		const isMulti = !!this.currentQ.multiSelect;
-		const hints: string[] = [];
-		if (this.inputMode) {
-			hints.push(dim(t)("enter=submit • esc=back • ^c=cancel"));
-		} else {
-			const multiQ = this.params.questions.length > 1;
-			const nav = multiQ ? "↑↓=nav • ←→=question" : "↑↓=nav";
-			if (isMulti) {
-				hints.push(
-					dim(t)(
-						`${nav} • space=toggle • enter=commit & next • esc=clear • ^c=cancel`,
-					),
-				);
-			} else {
-				hints.push(
-					dim(t)(`${nav} • type=filter • enter=select • esc=clear • ^c=cancel`),
-				);
-			}
-		}
-		return new Text(hints.join("\n"), 1, 0);
 	}
 
 	// ── Answer management ──────────────────────────────────────────────
@@ -236,7 +161,6 @@ export class AskQuestionnaire extends Container {
 			this.inputMode = true;
 			this.ensureEditor().focused = true;
 			this.invalidate();
-			this.renderLayout();
 			this.tui.requestRender();
 		} else if (item.kind === "next") {
 			const selected = Array.from(this.multiChecked)
@@ -270,7 +194,6 @@ export class AskQuestionnaire extends Container {
 		this.editor = undefined;
 		this.restoreAnswerState();
 		this.invalidate();
-		this.renderLayout();
 		this.tui.requestRender();
 	}
 
@@ -335,7 +258,6 @@ export class AskQuestionnaire extends Container {
 				this.inputMode = false;
 				this.editor = undefined;
 				this.invalidate();
-				this.renderLayout();
 				this.tui.requestRender();
 				return;
 			}
