@@ -1,6 +1,6 @@
 # pix-themes
 
-Theme pack for Pi Coding Agent. Bundles two dark themes in a single package.
+Theme pack for Pi Coding Agent. Bundles Pix Dark Themes.
 
 ## Install
 
@@ -11,8 +11,13 @@ pi install npm:@xynogen/pix-themes
 ## Themes
 
 ```text
-pix-tokyo-night   # Tokyo Night Storm
-pix-one-dark      # One Dark Pro
+pix-tokyo-night       # Tokyo Night Storm
+pix-one-dark          # One Dark Pro
+pix-catppuccin-mocha  # Catppuccin Mocha
+pix-gruvbox-dark      # Gruvbox Dark
+pix-dracula           # Dracula
+pix-nord              # Nord
+pix-rose-pine         # Rosé Pine
 ```
 
 Select a theme in Pi by its name above.

@@ -19,7 +19,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-themes`](packages/pix-themes) | Theme pack — Tokyo Night Storm + One Dark Pro |
+| [`@xynogen/pix-themes`](packages/pix-themes) | Theme pack — 7 dark themes |
 
 ### Core bundle
 
