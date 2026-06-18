@@ -39,6 +39,14 @@ npm:@xynogen/pix-ask
 npm:@xynogen/pix-toolbox
 npm:@xynogen/pix-sudo-run
 npm:@xynogen/pix-sudo
+npm:@xynogen/pix-nudge
+npm:@xynogen/pix-diagnostics
+npm:@xynogen/pix-commands
+npm:@xynogen/pix-update
+npm:@xynogen/pix-prompts
+npm:@xynogen/pix-welcome
+npm:@xynogen/pix-footer
+npm:@xynogen/pix-models
 npm:@xynogen/pix-core
 "
 

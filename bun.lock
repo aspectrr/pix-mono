@@ -49,17 +49,29 @@
         "@earendil-works/pi-tui": "*",
       },
     },
+    "packages/pix-commands": {
+      "name": "@xynogen/pix-commands",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+      },
+    },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.2.4",
+      "version": "0.3.0",
       "dependencies": {
-        "@xynogen/pix-data": "*",
+        "@xynogen/pix-commands": "*",
+        "@xynogen/pix-diagnostics": "*",
+        "@xynogen/pix-footer": "*",
+        "@xynogen/pix-models": "*",
+        "@xynogen/pix-nudge": "*",
+        "@xynogen/pix-prompts": "*",
         "@xynogen/pix-skills": "*",
-        "typebox": "^1.1.38",
+        "@xynogen/pix-update": "*",
+        "@xynogen/pix-welcome": "*",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
-        "@earendil-works/pi-tui": "*",
       },
     },
     "packages/pix-data": {
@@ -67,6 +79,14 @@
       "version": "0.1.1",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
+      },
+    },
+    "packages/pix-diagnostics": {
+      "name": "@xynogen/pix-diagnostics",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
       },
     },
     "packages/pix-edit": {
@@ -90,6 +110,17 @@
         "@earendil-works/pi-coding-agent": "*",
       },
     },
+    "packages/pix-footer": {
+      "name": "@xynogen/pix-footer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@xynogen/pix-data": "*",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
     "packages/pix-grep": {
       "name": "@xynogen/pix-grep",
       "version": "0.1.0",
@@ -111,6 +142,24 @@
         "@earendil-works/pi-tui": "*",
       },
     },
+    "packages/pix-models": {
+      "name": "@xynogen/pix-models",
+      "version": "0.1.0",
+      "dependencies": {
+        "@xynogen/pix-data": "*",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
+    "packages/pix-nudge": {
+      "name": "@xynogen/pix-nudge",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+      },
+    },
     "packages/pix-optimizer": {
       "name": "@xynogen/pix-optimizer",
       "version": "1.0.0",
@@ -127,18 +176,16 @@
         "cli-highlight": "^2.1.11",
         "diff": "^7.0.0",
       },
-      "optionalDependencies": {
-        "@xynogen/pix-bash": "*",
-        "@xynogen/pix-edit": "*",
-        "@xynogen/pix-find": "*",
-        "@xynogen/pix-grep": "*",
-        "@xynogen/pix-ls": "*",
-        "@xynogen/pix-read": "*",
-        "@xynogen/pix-write": "*",
-      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
+      },
+    },
+    "packages/pix-prompts": {
+      "name": "@xynogen/pix-prompts",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
       },
     },
     "packages/pix-read": {
@@ -154,7 +201,7 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -199,6 +246,21 @@
     },
     "packages/pix-toolbox": {
       "name": "@xynogen/pix-toolbox",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
+    "packages/pix-update": {
+      "name": "@xynogen/pix-update",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+      },
+    },
+    "packages/pix-welcome": {
+      "name": "@xynogen/pix-welcome",
       "version": "0.1.0",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -396,21 +458,33 @@
 
     "@xynogen/pix-bash": ["@xynogen/pix-bash@workspace:packages/pix-bash"],
 
+    "@xynogen/pix-commands": ["@xynogen/pix-commands@workspace:packages/pix-commands"],
+
     "@xynogen/pix-core": ["@xynogen/pix-core@workspace:packages/pix-core"],
 
     "@xynogen/pix-data": ["@xynogen/pix-data@workspace:packages/pix-data"],
+
+    "@xynogen/pix-diagnostics": ["@xynogen/pix-diagnostics@workspace:packages/pix-diagnostics"],
 
     "@xynogen/pix-edit": ["@xynogen/pix-edit@workspace:packages/pix-edit"],
 
     "@xynogen/pix-find": ["@xynogen/pix-find@workspace:packages/pix-find"],
 
+    "@xynogen/pix-footer": ["@xynogen/pix-footer@workspace:packages/pix-footer"],
+
     "@xynogen/pix-grep": ["@xynogen/pix-grep@workspace:packages/pix-grep"],
 
     "@xynogen/pix-ls": ["@xynogen/pix-ls@workspace:packages/pix-ls"],
 
+    "@xynogen/pix-models": ["@xynogen/pix-models@workspace:packages/pix-models"],
+
+    "@xynogen/pix-nudge": ["@xynogen/pix-nudge@workspace:packages/pix-nudge"],
+
     "@xynogen/pix-optimizer": ["@xynogen/pix-optimizer@workspace:packages/pix-optimizer"],
 
     "@xynogen/pix-pretty": ["@xynogen/pix-pretty@workspace:packages/pix-pretty"],
+
+    "@xynogen/pix-prompts": ["@xynogen/pix-prompts@workspace:packages/pix-prompts"],
 
     "@xynogen/pix-read": ["@xynogen/pix-read@workspace:packages/pix-read"],
 
@@ -425,6 +499,10 @@
     "@xynogen/pix-tokyo-night": ["@xynogen/pix-tokyo-night@workspace:packages/pix-tokyo-night"],
 
     "@xynogen/pix-toolbox": ["@xynogen/pix-toolbox@workspace:packages/pix-toolbox"],
+
+    "@xynogen/pix-update": ["@xynogen/pix-update@workspace:packages/pix-update"],
+
+    "@xynogen/pix-welcome": ["@xynogen/pix-welcome@workspace:packages/pix-welcome"],
 
     "@xynogen/pix-write": ["@xynogen/pix-write@workspace:packages/pix-write"],
 
