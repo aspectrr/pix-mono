@@ -6,15 +6,17 @@ Pi coding agent extension — skill loader tool + skills bundle.
 
 | Resource | Type | Description |
 |---|---|---|
-| `read_skill` | tool | Load a bundled skill's full instructions by name. `name="list"` lists all skills with descriptions. |
+| `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
 | `skills/` | skills | 21 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
 Pi loads skill *descriptions* into the system prompt at startup (progressive disclosure). Full content
-only enters context when the agent calls `read_skill(name=<skill>)` — or reads the file via the `read` tool.
+only enters context when the agent calls `read_skills(name=<skill>, full=true)` — or reads the file via the `read` tool.
 
-`read_skill` is the safe version of "agent prompts itself":
+Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skills take precedence on name collision.
+
+`read_skills` is the safe version of "agent prompts itself":
 
 - Agent calls tool explicitly — no autonomous injection
 - Orchestrator (user or system prompt) decides when skill loading is appropriate
@@ -49,14 +51,14 @@ only enters context when the agent calls `read_skill(name=<skill>)` — or reads
 ## Usage
 
 ```
-# Agent lists available skills
-read_skill(name="list")
+# Agent lists available skills (no args)
+read_skills()
 
-# Agent loads full commit procedure before committing
-read_skill(name="commit")
+# Agent reads description of a specific skill
+read_skills(name="commit")
 
-# User explicitly triggers a skill
-/skill:commit
+# Agent loads full commit procedure
+read_skills(name="commit", full=true)
 ```
 
 ## Install

@@ -1,22 +1,22 @@
 # pix-core
 
-Pi coding agent extension — core UI/UX bundle.
+Pi coding agent extension — core UI/UX meta-package.
+
+Installing `pix-core` pulls in all of the packages below as npm dependencies — no source code of its own.
 
 ## What's included
 
-| Extension | Type | Description |
-|---|---|---|
-| `welcome` | lifecycle | ASCII π banner + startup health checks (version, auth, models, gitignore) |
-| `footer` | UI | Status bar: mode / git branch / model / cost / tps |
-| `models` | command | `/models` — enhanced model picker with BenchLM rank, context, cost |
-| `update` | command | `/update` — self-update Pi + refresh extensions from dotfiles |
-| `lg` | command | `/lg` — summarize unstaged git changes with per-file +/- counts |
-| `yeet` | command | `/yeet` — stage all, commit, and push current changes |
-| `copy-all` | command | `/copy-all` — copy the whole conversation to the clipboard |
-| `diff` | command | `/diff` — list/open files changed during the last agent run |
-| `todo` | tool | durable execution checklist (survives compaction) |
-| `toolbox` | tool | `search` (fuzzy-find every tool / MCP tool / skill / command), `enable` / `disable` (turn a gated tool on/off by name) |
-| `nudges` | hooks | model-steering reminders (tools / skill / capability) |
+| Package | Description |
+|---|---|
+| `pix-welcome` | ASCII π banner + startup health checks (version, auth, models, gitignore) |
+| `pix-footer` | Status bar: mode / git branch / model / cost / live TPS |
+| `pix-models` | `/models` — enhanced model picker with BenchLM rank, context, cost |
+| `pix-update` | `/update` — self-update Pi + refresh extensions |
+| `pix-commands` | `/diff` and `/clear` slash commands |
+| `pix-diagnostics` | Compact LSP diagnostic widget |
+| `pix-prompts` | System-prompt injection (AGENTS.md + repo directive files) |
+| `pix-skills` | Agent skill loader (`read_skills` tool + 21 bundled skills) |
+| `pix-nudge` | Tool + capability nudge hooks |
 
 ## Install
 

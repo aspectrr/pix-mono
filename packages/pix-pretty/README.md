@@ -23,10 +23,10 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 
 ### Reasoning Tag Rendering
 
-- **Collapsible display** - Renders leaked `<think>`/`<thinking>` tags as collapsible HTML details blocks
-- **Visual distinction** - Uses ⚙ icon to clearly mark reasoning content
-- **Non-intrusive** - Only processes finalized messages, no live mutation
-- **Context-efficient** - Collapsible format minimizes visual clutter (toggle with ctrl+o in Pi agent)
+- **Live streaming** - Re-renders `<think>`/`<thinking>` blocks as styled blockquotes token-by-token during streaming
+- **Finalized cleanup** - On `message_end`, reformats all reasoning blocks with visual markers for persistence
+- **Partial-tag safety** - Strips trailing half-streamed tags (e.g. `<thin`) so they never flash as literal text
+- **Visual distinction** - Uses blockquote style to clearly separate reasoning from response
 
 ## Installation
 
@@ -53,7 +53,7 @@ pi install npm:@xynogen/pix-pretty
 
 This package combines two rendering systems:
 
-1. **Tool output rendering** (`src/index.ts`) - Intercepts read/bash/ls/find/grep/multi_grep tools
+1. **Tool output rendering** (`src/index.ts`) - Intercepts read/bash/ls/find/grep tools (standalone tool packages pix-bash/read/write/edit/find/grep/ls are loaded dynamically when installed)
 2. **Paste chip formatting** (`src/paste-chips.ts`) - Custom editor component for paste markers
 
 Both work independently but complement each other for a cohesive visual experience.
