@@ -1,26 +1,15 @@
 {
 	"name": "@xynogen/pix-core",
-	"version": "0.2.4",
-	"description": "Pi extension — core UI/UX bundle (welcome banner, footer, model picker, self-update)",
+	"version": "0.3.0",
+	"description": "Pi extension bundle — installs all core pix-* packages",
 	"type": "module",
-	"main": "src/index.ts",
 	"scripts": {
 		"test": "bun test"
 	},
 	"files": [
-		"src",
-		"skills",
 		"README.md",
 		"LICENSE"
 	],
-	"pi": {
-		"extensions": [
-			"src/index.ts"
-		],
-		"skills": [
-			"./skills"
-		]
-	},
 	"keywords": [
 		"pi",
 		"pi-package",
@@ -42,12 +31,17 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "*",
+		"@xynogen/pix-welcome": "*",
+		"@xynogen/pix-footer": "*",
+		"@xynogen/pix-diagnostics": "*",
+		"@xynogen/pix-prompts": "*",
 		"@xynogen/pix-skills": "*",
-		"typebox": "^1.1.38"
+		"@xynogen/pix-models": "*",
+		"@xynogen/pix-update": "*",
+		"@xynogen/pix-commands": "*",
+		"@xynogen/pix-nudge": "*"
 	},
 	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
+		"@earendil-works/pi-coding-agent": "*"
 	}
 }
