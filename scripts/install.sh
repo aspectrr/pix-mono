@@ -21,39 +21,30 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 # The distro installs as two modules:
 #
 #   CORE_PACKAGE       — pix-core, the meta/aggregator extension. Its
-#                        package.json lists every core member (pix-welcome,
+#                        package.json lists every bundled member as an npm
+#                        `dependency` — the core UI/UX extensions (pix-welcome,
 #                        pix-footer, pix-models, pix-update, pix-commands,
-#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills —
-#                        and transitively pix-data via footer/models) as npm
-#                        `dependencies`, so a single `pi install` pulls the
-#                        whole tree. pix-core/src/extension.ts then imports each
-#                        member's factory and boots them in-process. Pi only
-#                        needs the ONE extension registered — installing the
-#                        members separately is redundant (npm already fetched
-#                        them) and would double-register. So: install pix-core
-#                        alone.
-#   EXTENSION_PACKAGES — standalone extension + tool packages. No meta bundles
-#                        these; each registers its own extension/tool and must
-#                        be installed individually.
+#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills),
+#                        the standard tool suite (pix-read, pix-write, pix-edit,
+#                        pix-find, pix-grep, pix-ls, pix-bash, pix-todo,
+#                        pix-ask), plus pix-optimizer and pix-gate — and pulls
+#                        pix-data/pix-pretty transitively. A single
+#                        `pi install` fetches the whole tree;
+#                        pix-core/src/extension.ts imports each member's factory
+#                        and boots them in-process. Pi only needs the ONE
+#                        extension registered — installing bundled members
+#                        separately is redundant. So: install pix-core alone.
+#   EXTENSION_PACKAGES — packages NOT bundled by pix-core: the theme, the
+#                        9Router provider, and opt-in tools (sudo, toolbox).
+#                        Each registers its own extension/tool and must be
+#                        installed individually.
 CORE_PACKAGE="npm:@xynogen/pix-core"
 
 EXTENSION_PACKAGES="
 npm:@xynogen/pix-tokyo-night
-npm:@xynogen/pix-optimizer
 npm:@xynogen/pix-9router
-npm:@xynogen/pix-pretty
-npm:@xynogen/pix-bash
-npm:@xynogen/pix-read
-npm:@xynogen/pix-write
-npm:@xynogen/pix-edit
-npm:@xynogen/pix-find
-npm:@xynogen/pix-grep
-npm:@xynogen/pix-ls
 npm:@xynogen/pix-sudo
-npm:@xynogen/pix-todo
-npm:@xynogen/pix-ask
 npm:@xynogen/pix-toolbox
-npm:@xynogen/pix-gate
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------

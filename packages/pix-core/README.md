@@ -10,6 +10,8 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 
 ## What's included
 
+**UI / UX extensions**
+
 | Package | Description |
 |---|---|
 | `pix-welcome` | ASCII π banner + startup health checks (version, auth, models, gitignore) |
@@ -21,6 +23,27 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 | `pix-prompts` | System-prompt injection (AGENTS.md + repo directive files) |
 | `pix-skills` | Agent skill loader (`read_skills` tool + 23 bundled skills) |
 | `pix-nudge` | Tool + capability nudge hooks |
+
+**Tool suite** (drop-in replacements for Pi's built-in tools)
+
+| Package | Description |
+|---|---|
+| `pix-read` | `read` — file read with syntax highlighting |
+| `pix-write` | `write` — file write with split-diff rendering |
+| `pix-edit` | `edit` — precise text replacement with per-edit diff |
+| `pix-find` | `find` — glob search with FFF acceleration |
+| `pix-grep` | `grep` — pattern search with FFF-prioritised results |
+| `pix-ls` | `ls` — directory listing as an icon tree |
+| `pix-bash` | `bash` — shell execution with framed output + exit-code summary |
+| `pix-todo` | `todo` — durable execution checklist |
+| `pix-ask` | `ask_user` — structured TUI questionnaire |
+
+**Behaviour**
+
+| Package | Description |
+|---|---|
+| `pix-optimizer` | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+| `pix-gate` | Permission gate for dangerous bash commands |
 
 ## Install
 

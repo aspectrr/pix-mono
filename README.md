@@ -21,32 +21,11 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | --- | --- |
 | [`@xynogen/pix-tokyo-night`](packages/pix-tokyo-night) | Tokyo Night Storm theme |
 
-### Providers
+### Core bundle
 
-| Package | Description |
-| --- | --- |
-| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools via router API |
+Bundled together by [`@xynogen/pix-core`](packages/pix-core) — a single `pi install npm:@xynogen/pix-core` pulls and activates all of these.
 
-### Tool replacements
-
-Drop-in replacements for Pi's built-in tools with pretty output via `pix-pretty`.
-
-| Package | Description |
-| --- | --- |
-| [`@xynogen/pix-bash`](packages/pix-bash) | `bash` — shell execution with framed output block and exit-code summary |
-| [`@xynogen/pix-read`](packages/pix-read) | `read` — file read with syntax highlighting and image metadata |
-| [`@xynogen/pix-write`](packages/pix-write) | `write` — file write with split-diff rendering on overwrite |
-| [`@xynogen/pix-edit`](packages/pix-edit) | `edit` — precise text replacement with side-by-side diff per edit |
-| [`@xynogen/pix-find`](packages/pix-find) | `find` — glob search with FFF acceleration and file icons |
-| [`@xynogen/pix-grep`](packages/pix-grep) | `grep` — pattern search with FFF-prioritised results |
-| [`@xynogen/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
-| [`@xynogen/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
-| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
-| [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution with PAM password overlay, blocked in non-interactive mode |
-
-### Core extensions
-
-Bundled together by [`@xynogen/pix-core`](packages/pix-core) — install all of these in one command.
+**UI / UX extensions**
 
 | Package | Description |
 | --- | --- |
@@ -60,15 +39,38 @@ Bundled together by [`@xynogen/pix-core`](packages/pix-core) — install all of 
 | [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — `AGENTS.md` baseline + repo directive files |
 | [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 23 bundled skills) |
 
-### Standalone extensions
+**Tool suite**
 
-Independently installable — not included in `pix-core`.
+Drop-in replacements for the tools Pi exposes to the model (`read`, `write`, `edit`, `find`, `grep`, `ls`, `bash`, `todo`, `ask_user`). Each registers under the **same tool name** as the Pi built-in, so the model calls them transparently — no prompt changes needed. The only difference is the rendered output: syntax highlighting, side-by-side diffs, icon trees, and FFF-accelerated search, all via [`pix-pretty`](packages/pix-pretty). Install `pix-core` and the whole suite is active; the built-ins are shadowed.
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search tool picker, enable/disable tools from prompt |
-| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-bash`](packages/pix-bash) | `bash` — shell execution with framed output block and exit-code summary |
+| [`@xynogen/pix-read`](packages/pix-read) | `read` — file read with syntax highlighting and image metadata |
+| [`@xynogen/pix-write`](packages/pix-write) | `write` — file write with split-diff rendering on overwrite |
+| [`@xynogen/pix-edit`](packages/pix-edit) | `edit` — precise text replacement with side-by-side diff per edit |
+| [`@xynogen/pix-find`](packages/pix-find) | `find` — glob search with FFF acceleration and file icons |
+| [`@xynogen/pix-grep`](packages/pix-grep) | `grep` — pattern search with FFF-prioritised results |
+| [`@xynogen/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
+| [`@xynogen/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
+| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
+
+**Behaviour**
+
+| Package | Description |
+| --- | --- |
 | [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+
+### Standalone extensions (opt-in)
+
+Not bundled by `pix-core` — install each only if you want it. These are deliberately kept out of the default distro because each carries a setup cost or a sensitive capability: a provider API key, root execution, or a manual tool-toggling UI. Install with `pi install npm:@xynogen/<name>`.
+
+| Package | Why it's opt-in |
+| --- | --- |
+| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools — needs a 9Router API key, so only useful if you route through 9Router |
+| [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
+| [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
 
 ## Install
 
