@@ -27,8 +27,7 @@ packages/
   pix-todo/        # Tool — durable execution checklist (survives context compaction)
   pix-ask/         # Tool — structured questionnaire UI (ask_user)
   pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
-  pix-sudo-run/    # Tool — sudo_run with interactive PAM password prompt
-  pix-sudo/        # Thin wrapper re-exporting pix-sudo-run (backward compat)
+  pix-sudo/        # Tool — sudo_run with interactive PAM password prompt
 scripts/
   dev-link.sh      # Symlink local packages into Pi for instant dev iteration
   publish-all.sh   # Publish changed packages to npm (idempotent — skips already-published versions)

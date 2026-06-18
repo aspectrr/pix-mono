@@ -11,4 +11,3 @@ package-lock.json
 # Pix Agent
 .pi/
 .pi-lens/
-graphify-out/

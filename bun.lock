@@ -170,7 +170,7 @@
     },
     "packages/pix-pretty": {
       "name": "@xynogen/pix-pretty",
-      "version": "1.5.1",
+      "version": "1.6.0",
       "dependencies": {
         "@ff-labs/fff-node": "^0.5.2",
         "cli-highlight": "^2.1.11",
@@ -209,17 +209,6 @@
     },
     "packages/pix-sudo": {
       "name": "@xynogen/pix-sudo",
-      "version": "0.1.0",
-      "dependencies": {
-        "@xynogen/pix-sudo-run": "*",
-      },
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-        "@earendil-works/pi-tui": "*",
-      },
-    },
-    "packages/pix-sudo-run": {
-      "name": "@xynogen/pix-sudo-run",
       "version": "0.1.0",
       "dependencies": {
         "typebox": "^1.1.38",
@@ -491,8 +480,6 @@
     "@xynogen/pix-skills": ["@xynogen/pix-skills@workspace:packages/pix-skills"],
 
     "@xynogen/pix-sudo": ["@xynogen/pix-sudo@workspace:packages/pix-sudo"],
-
-    "@xynogen/pix-sudo-run": ["@xynogen/pix-sudo-run@workspace:packages/pix-sudo-run"],
 
     "@xynogen/pix-todo": ["@xynogen/pix-todo@workspace:packages/pix-todo"],
 
