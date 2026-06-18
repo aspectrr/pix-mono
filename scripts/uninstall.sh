@@ -25,7 +25,7 @@ npm:@xynogen/pix-edit
 npm:@xynogen/pix-find
 npm:@xynogen/pix-grep
 npm:@xynogen/pix-ls
-npm:@xynogen/pix-sudo-run
+npm:@xynogen/pix-sudo
 npm:@xynogen/pix-core
 "
 
