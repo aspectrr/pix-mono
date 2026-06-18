@@ -20,14 +20,11 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "search",
 
 # Space-separated package list (POSIX sh has no arrays).
 #
-# pix-core is a meta-package that pulls in its sub-packages via its own
-# dependency graph (pix-welcome, pix-footer, pix-commands, pix-update,
-# pix-todo, pix-ask, pix-toolbox, pix-nudge, pix-diagnostics, pix-prompts,
-# pix-skills, pix-models). Do NOT list those sub-packages here — Pi walks the
-# dep graph and would register their extensions twice, causing tool/flag
-# conflict errors.
-#
-# Only list pix-core + packages that are NOT in pix-core's dep tree.
+# Pi does NOT walk package.json dependencies — each pi-package must be
+# installed explicitly. pix-core is a meta-package whose sub-packages
+# (pix-welcome, pix-footer, pix-commands, pix-update, pix-todo, pix-ask,
+# pix-toolbox, pix-nudge, pix-diagnostics, pix-prompts, pix-skills,
+# pix-models) must all be listed here individually.
 PIX_PACKAGES="
 npm:@xynogen/pix-data
 npm:@xynogen/pix-tokyo-night
@@ -43,6 +40,18 @@ npm:@xynogen/pix-grep
 npm:@xynogen/pix-ls
 npm:@xynogen/pix-sudo
 npm:@xynogen/pix-core
+npm:@xynogen/pix-welcome
+npm:@xynogen/pix-footer
+npm:@xynogen/pix-commands
+npm:@xynogen/pix-update
+npm:@xynogen/pix-todo
+npm:@xynogen/pix-ask
+npm:@xynogen/pix-toolbox
+npm:@xynogen/pix-nudge
+npm:@xynogen/pix-diagnostics
+npm:@xynogen/pix-prompts
+npm:@xynogen/pix-skills
+npm:@xynogen/pix-models
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
