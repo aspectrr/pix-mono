@@ -18,15 +18,32 @@ PI_THEME="pix-tokyo-night"
 SETTINGS_FILE="$PI_ROOT/settings.json"
 DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user", "todo", "read_skills"]'
 
-# Space-separated package list (POSIX sh has no arrays).
+# The distro installs as two modules:
 #
-# Pi does NOT walk package.json dependencies — each pi-package must be
-# installed explicitly. pix-core is a meta-package whose sub-packages
-# (pix-welcome, pix-footer, pix-commands, pix-update, pix-todo, pix-ask,
-# pix-toolbox, pix-nudge, pix-diagnostics, pix-prompts, pix-skills,
-# pix-models) must all be listed here individually.
-PIX_PACKAGES="
+#   CORE_PACKAGES      — pix-core (the meta extension) plus the sub-packages
+#                        its extension.ts imports directly: pix-welcome,
+#                        pix-footer, pix-models, pix-update, pix-commands,
+#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills.
+#                        Each must be physically installed for those imports
+#                        to resolve. pix-data is the shared model data layer
+#                        the picker + footer read from, so it lives here too.
+#   EXTENSION_PACKAGES — standalone extension + tool packages, each
+#                        independently installable on its own.
+CORE_PACKAGES="
 npm:@xynogen/pix-data
+npm:@xynogen/pix-core
+npm:@xynogen/pix-welcome
+npm:@xynogen/pix-footer
+npm:@xynogen/pix-models
+npm:@xynogen/pix-update
+npm:@xynogen/pix-commands
+npm:@xynogen/pix-nudge
+npm:@xynogen/pix-diagnostics
+npm:@xynogen/pix-prompts
+npm:@xynogen/pix-skills
+"
+
+EXTENSION_PACKAGES="
 npm:@xynogen/pix-tokyo-night
 npm:@xynogen/pix-optimizer
 npm:@xynogen/pix-9router
@@ -39,19 +56,9 @@ npm:@xynogen/pix-find
 npm:@xynogen/pix-grep
 npm:@xynogen/pix-ls
 npm:@xynogen/pix-sudo
-npm:@xynogen/pix-core
-npm:@xynogen/pix-welcome
-npm:@xynogen/pix-footer
-npm:@xynogen/pix-commands
-npm:@xynogen/pix-update
 npm:@xynogen/pix-todo
 npm:@xynogen/pix-ask
 npm:@xynogen/pix-toolbox
-npm:@xynogen/pix-nudge
-npm:@xynogen/pix-diagnostics
-npm:@xynogen/pix-prompts
-npm:@xynogen/pix-skills
-npm:@xynogen/pix-models
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
@@ -128,8 +135,13 @@ install_pi_pkg() {
 	fi
 }
 
-info "Installing Pix Distro..."
-for spec in $PIX_PACKAGES; do
+info "Installing Pix core module..."
+for spec in $CORE_PACKAGES; do
+	install_pi_pkg "$spec"
+done
+
+info "Installing Pix extension module..."
+for spec in $EXTENSION_PACKAGES; do
 	install_pi_pkg "$spec"
 done
 
