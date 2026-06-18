@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-core",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "Pi extension bundle — installs and activates all core pix-* extensions",
 	"type": "module",
 	"main": "src/extension.ts",
@@ -46,7 +46,18 @@
 		"@xynogen/pix-models": "*",
 		"@xynogen/pix-update": "*",
 		"@xynogen/pix-commands": "*",
-		"@xynogen/pix-nudge": "*"
+		"@xynogen/pix-nudge": "*",
+		"@xynogen/pix-read": "*",
+		"@xynogen/pix-write": "*",
+		"@xynogen/pix-edit": "*",
+		"@xynogen/pix-find": "*",
+		"@xynogen/pix-grep": "*",
+		"@xynogen/pix-ls": "*",
+		"@xynogen/pix-bash": "*",
+		"@xynogen/pix-todo": "*",
+		"@xynogen/pix-ask": "*",
+		"@xynogen/pix-optimizer": "*",
+		"@xynogen/pix-gate": "*"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

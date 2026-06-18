@@ -12,17 +12,31 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import registerAsk from "@xynogen/pix-ask/src/index.ts";
+import registerBash from "@xynogen/pix-bash/src/extension.ts";
 import registerCommands from "@xynogen/pix-commands/src/extension.ts";
 import registerDiagnostics from "@xynogen/pix-diagnostics/src/extension.ts";
+import registerEdit from "@xynogen/pix-edit/src/extension.ts";
+import registerFind from "@xynogen/pix-find/src/extension.ts";
 import registerFooter from "@xynogen/pix-footer/src/extension.ts";
+import registerGate from "@xynogen/pix-gate/src/index.ts";
+import registerGrep from "@xynogen/pix-grep/src/extension.ts";
+import registerLs from "@xynogen/pix-ls/src/extension.ts";
 import registerModels from "@xynogen/pix-models/src/extension.ts";
 import registerNudge from "@xynogen/pix-nudge/src/extension.ts";
+import registerOptimizer from "@xynogen/pix-optimizer/src/index.ts";
 import registerPrompts from "@xynogen/pix-prompts/src/extension.ts";
+import registerRead from "@xynogen/pix-read/src/extension.ts";
 import registerSkills from "@xynogen/pix-skills/src/index.ts";
+import registerTodo from "@xynogen/pix-todo/src/index.ts";
 import registerUpdate from "@xynogen/pix-update/src/extension.ts";
 import registerWelcome from "@xynogen/pix-welcome/src/extension.ts";
+import registerWrite from "@xynogen/pix-write/src/extension.ts";
 
-type Factory = (pi: ExtensionAPI) => void;
+// Members accept either the full `ExtensionAPI` or pix-pretty's looser
+// `PiPrettyApi` view of it. `ExtensionAPI` satisfies both, so we erase the
+// param type at registration and pass the real host through unchanged.
+type Factory = (pi: never) => void;
 
 const MEMBERS: Factory[] = [
 	registerWelcome,
@@ -34,10 +48,21 @@ const MEMBERS: Factory[] = [
 	registerDiagnostics,
 	registerPrompts,
 	registerSkills,
+	registerRead,
+	registerWrite,
+	registerEdit,
+	registerFind,
+	registerGrep,
+	registerLs,
+	registerBash,
+	registerTodo,
+	registerAsk,
+	registerOptimizer,
+	registerGate,
 ];
 
 export default function (pi: ExtensionAPI): void {
 	for (const register of MEMBERS) {
-		register(pi);
+		(register as (pi: ExtensionAPI) => void)(pi);
 	}
 }
