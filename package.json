@@ -20,8 +20,8 @@
 		"uninstall:distro": "bash scripts/uninstall.sh",
 		"dev:link": "bash scripts/dev-link.sh",
 		"dev:unlink": "bash scripts/dev-link.sh --unlink",
-		"publish:all": "bash scripts/publish-all.sh",
-		"publish:dry": "for d in packages/*; do (cd $d && npm publish --access public --dry-run); done"
+		"publish:all": "bun scripts/publish-all.ts",
+		"publish:dry": "bun scripts/publish-all.ts --dry-run"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.16",
