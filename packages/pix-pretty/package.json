@@ -17,6 +17,7 @@
 		"./fff": "./src/fff.ts",
 		"./types": "./src/types.ts",
 		"./utils": "./src/utils.ts",
+		"./resize": "./src/resize.ts",
 		"./context": "./src/tools/context.ts"
 	},
 	"scripts": {
@@ -61,15 +62,6 @@
 		"cli-highlight": "^2.1.11",
 		"@ff-labs/fff-node": "^0.5.2",
 		"diff": "^7.0.0"
-	},
-	"optionalDependencies": {
-		"@xynogen/pix-bash": "*",
-		"@xynogen/pix-read": "*",
-		"@xynogen/pix-write": "*",
-		"@xynogen/pix-edit": "*",
-		"@xynogen/pix-find": "*",
-		"@xynogen/pix-grep": "*",
-		"@xynogen/pix-ls": "*"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",
