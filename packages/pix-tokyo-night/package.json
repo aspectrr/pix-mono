@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-tokyo-night",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Tokyo Night Storm theme for Pi Coding Agent",
 	"type": "module",
 	"scripts": {
