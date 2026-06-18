@@ -82,11 +82,13 @@ let failedCount = 0;
 async function publishOne(pkg: PkgInfo): Promise<void> {
 	const { dir, name, version } = pkg;
 	try {
-		await $`npm publish ${PUBLISH_FLAGS}`.cwd(dir).quiet();
+		const result = await $`npm publish ${PUBLISH_FLAGS}`.cwd(dir).quiet();
+		if (DRY_RUN) console.log(result.stdout.toString());
 		console.log(`✔ published ${name}@${version}`);
 		publishedCount++;
 	} catch (e) {
-		const out = (e as { stderr?: string; stdout?: string }).stderr ?? "";
+		const err = e as { stderr?: Buffer | string; stdout?: Buffer | string };
+		const out = (err.stderr?.toString() ?? "") + (err.stdout?.toString() ?? "");
 		if (out.includes("cannot publish over") || out.includes("EPUBLISHCONFLICT")) {
 			console.log(`↷ skip (race): ${name}@${version}`);
 			return;
