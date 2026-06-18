@@ -19,10 +19,17 @@ SETTINGS_FILE="$PI_ROOT/settings.json"
 DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "search", "fetch", "transcribe", "ask_user", "todo", "read_skills", "ast_grep_search", "ast_grep_replace", "lsp_navigation", "lsp_diagnostics", "lens_diagnostics"]'
 
 # Space-separated package list (POSIX sh has no arrays).
-# Order matters: dependencies before dependents.
+#
+# pix-core is a meta-package that pulls in its sub-packages via its own
+# dependency graph (pix-welcome, pix-footer, pix-commands, pix-update,
+# pix-todo, pix-ask, pix-toolbox, pix-nudge, pix-diagnostics, pix-prompts,
+# pix-skills, pix-models). Do NOT list those sub-packages here — Pi walks the
+# dep graph and would register their extensions twice, causing tool/flag
+# conflict errors.
+#
+# Only list pix-core + packages that are NOT in pix-core's dep tree.
 PIX_PACKAGES="
 npm:@xynogen/pix-data
-npm:@xynogen/pix-skills
 npm:@xynogen/pix-tokyo-night
 npm:@xynogen/pix-optimizer
 npm:@xynogen/pix-9router
@@ -34,19 +41,7 @@ npm:@xynogen/pix-edit
 npm:@xynogen/pix-find
 npm:@xynogen/pix-grep
 npm:@xynogen/pix-ls
-npm:@xynogen/pix-todo
-npm:@xynogen/pix-ask
-npm:@xynogen/pix-toolbox
 npm:@xynogen/pix-sudo-run
-npm:@xynogen/pix-sudo
-npm:@xynogen/pix-nudge
-npm:@xynogen/pix-diagnostics
-npm:@xynogen/pix-commands
-npm:@xynogen/pix-update
-npm:@xynogen/pix-prompts
-npm:@xynogen/pix-welcome
-npm:@xynogen/pix-footer
-npm:@xynogen/pix-models
 npm:@xynogen/pix-core
 "
 
