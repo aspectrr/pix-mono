@@ -1,16 +1,17 @@
 ---
 name: readme
 description: Create or update a project README in a fixed, deployment-focused style with required sections, env-var tables, and an enforced tone
-disable-model-invocation: true
 ---
 # README Directive
 
 ## Core Philosophy
+
 Produce README aimed at deployment engineer or new developer who needs to run project locally and integrate it into a platform. Optimize for: can they get it running in five minutes, do they know which knobs safe to turn in production? No marketing language, no hobbyist framing.
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
 
 ### Phase 1: Gather Inputs (Before Writing)
+
 - **AUTO-RUN**: Run terminal commands and tool calls needed proactively without confirmation unless explicit input required.
 - **DETECT EXISTING**: `README.md` already exists → read it first as source of truth for name, purpose, documented endpoints. Treat update as rewrite into this style, preserving factual content.
 - **SCAN**: Read `.env.example`, route files, `docker-compose.yml`, task runner files (`justfile`, `Makefile`, `mise.toml`, `Taskfile.yml`, `package.json`), main entrypoint to gather source material.
@@ -33,6 +34,7 @@ Following inputs MUST be identified before drafting:
 | 11 | License | Exact license name |
 
 ### Phase 2: Environment Variable Buckets
+
 Split every env var into exactly one of these three buckets. Bucket empty for project → OMIT its table, don't pad with empty rows.
 
 | Bucket | Table Columns | Purpose |
@@ -42,6 +44,7 @@ Split every env var into exactly one of these three buckets. Bucket empty for pr
 | Optional feature toggles / external integrations | `Variable` (left-aligned `\|:---\|`), `Default` (right-aligned `\|---:\|`), `Description` | Feature flags, third-party API keys |
 
 ### Phase 3: Required Structure (Sections in Order)
+
 1. `# <Full Name> (<Acronym>)` — acronym only if one exists.
 2. Opening paragraph (2-3 sentences): what service is, what it ingests, what it emits.
 3. Separate short paragraph: key operational characteristics.
@@ -57,6 +60,7 @@ Split every env var into exactly one of these three buckets. Bucket empty for pr
 13. `## License` — one line.
 
 ### Phase 4: Style Rules (Enforce Strictly)
+
 - **PROSE**: Plain factual. No marketing words ("blazing fast", "powerful", "easy", "simple"). No emojis. No badges. No screenshots.
 - **ORIENTING SENTENCE**: Every section starts with one orienting sentence before any code, list, or table.
 - **TABLES OVER BULLETS**: Use tables for structured data (env vars, endpoints). Never use bullet lists for things with columns.
@@ -68,6 +72,7 @@ Split every env var into exactly one of these three buckets. Bucket empty for pr
 - **OPENING**: Open with what it does, not what it is for.
 
 ### Phase 5: Customization Rules
+
 - **MISSING BUCKET**: Project has no infra-tunable middle tier or no optional integrations → omit that table rather than padding.
 - **NO COMPOSE**: Omit `## Docker Compose` section entirely if no compose file exists.
 - **NO AUTH**: Service unauthenticated → omit `## Authentication`.
@@ -76,4 +81,5 @@ Split every env var into exactly one of these three buckets. Bucket empty for pr
 - **EXISTING README**: Present diff of proposed changes, ask confirmation before overwriting non-trivial existing README.
 
 ## Report
+
 After writing, output final file path and one-line summary of which optional sections omitted (and why).

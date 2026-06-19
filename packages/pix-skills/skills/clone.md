@@ -1,10 +1,11 @@
 ---
 name: clone
 description: Clone any git repository (GitHub/GitLab/Bitbucket URL, SSH, or owner/repo shorthand) into /tmp/clones for read-only code exploration. Use proactively whenever the user provides a git URL, asks to "look at", "explore", "read", "check out", or "analyze" an external repository, or shares a github.com/gitlab.com/bitbucket.org link.
-disable-model-invocation: true
 ---
 # Clone Directive
-## Below are what agent MUST do:
+
+## Below are what agent MUST do
+
 - **AUTO-RUN**: Run terminal commands proactively without confirmation unless explicit input required.
 - **AUTO-INVOKE**: Trigger automatically when user message contains git URL, repo shorthand (`owner/repo`), or phrases like "clone", "look at this repo", "explore", "analyze this project", "check out <url>".
 - **INPUT**: Accept git URL (https, ssh, or `github.com/owner/repo` / `owner/repo` shorthand). Normalize shorthand → `https://github.com/owner/repo`.

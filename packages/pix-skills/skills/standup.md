@@ -1,7 +1,6 @@
 ---
 name: standup
 description: This skill should be used when the user asks to "standup me", "buat standup", "create standup script", "generate standup", "standup hari ini", or any request to prepare a daily standup update. Handles fetching previous context from Notion, prompting the user, generating a script, and saving to Notion.
-disable-model-invocation: true
 ---
 
 # Standup Script Skill
@@ -78,6 +77,7 @@ Blocker — [blocker update atau "Tidak ada blocker"]
 ```
 
 Rules:
+
 - One callout per section — keep body to single short line where possible
 - Use natural Bahasa Indonesia
 - Salam + nama on single line at top (plain paragraph, not callout)
@@ -189,17 +189,19 @@ Return URL database ke user
 2. Fetch isi **setiap** child page secara paralel (batch dalam satu panggilan jika memungkinkan).
 3. Dari tiap page, extract:
    - **Tanggal**: parse dari title (`YYYY-MM-DD`)
-   - **Kemarin**: isi callout `yellow_bg` (strip bold marker `**Kemarin** — `)
-   - **Hari Ini**: isi callout `green_bg` (strip bold marker `**Hari ini** — `)
-   - **Blocker**: isi callout `red_bg` (strip bold marker `**Blocker** — `)
+   - **Kemarin**: isi callout `yellow_bg` (strip bold marker `**Kemarin** —`)
+   - **Hari Ini**: isi callout `green_bg` (strip bold marker `**Hari ini** —`)
+   - **Blocker**: isi callout `red_bg` (strip bold marker `**Blocker** —`)
 
 #### Step 3 — Create atau Reuse Database
 
 Database title format: `Standup [IndonesianMonth] [Year]` (e.g., `Standup Mei 2026`).
 
 **Jika belum ada** → buat dengan `notion-create-database`:
+
 - Parent: month folder page ID
 - Schema:
+
 ```sql
 CREATE TABLE (
   "Name" TITLE,
@@ -209,6 +211,7 @@ CREATE TABLE (
   "Blocker" RICH_TEXT
 )
 ```
+
 - Setelah create, ambil `data_source_id` dari response (`collection://...`).
 
 **Jika sudah ada** → fetch database → ambil `data_source_id` + cek rows yang sudah ada (hindari duplikat berdasarkan `Name`).
@@ -218,6 +221,7 @@ CREATE TABLE (
 Gunakan `notion-create-pages` dengan `parent: { data_source_id: "..." }`.
 
 Per row:
+
 ```json
 {
   "Name": "Standup - YYYY-MM-DD",
@@ -234,6 +238,7 @@ Batch semua rows dalam **satu** `notion-create-pages` call (max 5 per call jika 
 #### Step 5 — Enable Wrap Cells
 
 Setelah database dibuat, fetch database → ambil `view_id` dari `<views>` → update view:
+
 ```
 notion-update-view: WRAP CELLS true
 ```

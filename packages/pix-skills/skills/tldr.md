@@ -1,14 +1,15 @@
 ---
 name: tldr
 description: Maximum-density technical summary of workflows and purposes. Use when user asks "tldr", "summarize this", "give me the short version", "what's the gist", or needs the essence fast with zero filler.
-disable-model-invocation: true
 ---
 # TLDR Directive
 
 ## Goal
+
 Strip to essence. Reader gets full picture in fewest tokens, no re-reading required.
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
+
 - **AUTO-RUN**: Read what's needed to summarize accurately. Don't summarize from the filename.
 - **SCOPE**: Tech only. No pleasantries, no preamble, no "in summary".
 - **WORKFLOWS**: Name key workflows and their purpose, one line each.
@@ -17,6 +18,7 @@ Strip to essence. Reader gets full picture in fewest tokens, no re-reading requi
 - **DENSITY**: Bullets over prose. One fact per bullet. No fact stated twice.
 
 ## Output Format
+
 ```
 **[Subject]**
 - [Core fact]
@@ -26,6 +28,7 @@ Strip to essence. Reader gets full picture in fewest tokens, no re-reading requi
 ```
 
 ## Red Flags — STOP
+
 - Conversational filler ("Sure!", "In summary", "Hope this helps").
 - Restating same fact in different words.
 - Summarizing from name or title without reading source.

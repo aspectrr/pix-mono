@@ -1,28 +1,33 @@
 ---
 name: finish
 description: Structured branch completion — verify, decide, and clean up when implementation is done
-disable-model-invocation: true
 ---
 # Finish Directive
 
 ## Overview
+
 Guide completion of dev work by verifying tests + presenting clear options for the branch.
 
 **Core principle:** Verify tests → Present options → Execute choice → Clean up.
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
 
 ### Step 1: Verify Tests
+
 Run full test suite BEFORE presenting any options.
+
 ```bash
 # Use the project's test command, e.g.:
 pytest / npm test / go test ./... / cargo test
 ```
+
 - Tests **fail** → Show failures. Do NOT proceed to Step 2. Fix first.
 - Tests **pass** → Continue.
 
 ### Step 2: Present Options
+
 Present exactly these 4 options — no more, no less:
+
 ```
 Implementation complete. All tests pass. What would you like to do?
 
@@ -37,6 +42,7 @@ Which option?
 ### Step 3: Execute Choice
 
 **Option 1 — Merge locally:**
+
 ```bash
 git checkout <base-branch>
 git pull
@@ -46,6 +52,7 @@ git branch -d <feature-branch>
 ```
 
 **Option 2 — Create PR:**
+
 ```bash
 git push -u origin <feature-branch>
 gh pr create --title "<title>" --body "## Summary
@@ -60,17 +67,21 @@ Report: "Branch `<name>` kept. No changes made."
 
 **Option 4 — Discard:**
 Require typed confirmation first:
+
 ```
 This will permanently delete branch <name> and all its commits.
 Type 'discard' to confirm.
 ```
+
 Then:
+
 ```bash
 git checkout <base-branch>
 git branch -D <feature-branch>
 ```
 
 ## Red Flags — Never
+
 - Proceed with failing tests
 - Merge without re-running tests on merged result
 - Delete work without typed confirmation

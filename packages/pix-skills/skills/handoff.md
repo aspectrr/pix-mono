@@ -1,7 +1,6 @@
 ---
 name: handoff
 description: Toggle session handoff — if HANDOFF.md does not exist, write one (giving mode); if it exists, read and delete it (receiving mode)
-disable-model-invocation: true
 ---
 
 # Handoff Directive
@@ -12,7 +11,7 @@ Single-agent session handoff via toggle. One session closes, next picks up exact
 
 **Core principle:** Detect file → Give or Receive → Leave no loose ends.
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
 
 ### Step 1: Detect Mode
 

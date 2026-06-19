@@ -1,11 +1,11 @@
 ---
 name: runner
 description: Generate, convert, or update a task runner file (justfile, Makefile, mise tasks, Taskfile.yml, package.json scripts, or run.sh) for any project
-disable-model-invocation: true
 ---
 # Task Runner Generation Directive
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
+
 - **AUTO-RUN**: Run terminal commands and tool calls needed proactively without confirmation unless explicit input required.
 - **ASK FORMAT**: Before generating anything, ask user which runner format they want using the Question tool with these options:
   - **justfile** — requires `just`. Native deps, groups, params, comments.
@@ -94,6 +94,7 @@ Use as reference when generating recipes:
 ## Format-Specific Generation Rules
 
 ### justfile
+
 - Use `set shell := ["bash", "-cu"]`
 - Use `[group('Name')]` for categories
 - Dependencies via `recipe: dep1 dep2`
@@ -102,6 +103,7 @@ Use as reference when generating recipes:
 - **Standalone**: `recipe:` with direct command
 - **Simple parameterized**: `recipe action:` where action passes through to the tool
 - **Complex parameterized**: `recipe action:` with `if/else` dispatch in a bash block
+
   ```just
   # Docker operations (build|up|down)
   [group('Infra')]
@@ -140,6 +142,7 @@ Use as reference when generating recipes:
   ```
 
 ### Makefile
+
 - Set `SHELL := /bin/bash` and `.DEFAULT_GOAL := help`
 - Declare all targets in `.PHONY`
 - Use `## comment` after target for help text, generate a `help` target with `grep -E`
@@ -149,29 +152,31 @@ Use as reference when generating recipes:
 - **Standalone**: standard target with direct commands
 - **Simple parameterized**: pattern rule `docker-%:` dispatching to `docker compose $*`
 - **Complex parameterized**: pattern rule `test-%:` with per-target recipes
+
   ```makefile
   .PHONY: docker-% test-% format-% lint
 
   docker-%: ## Docker operations (build|up|down)
-  	docker compose -f docker-compose.dev.yml $*
+   docker compose -f docker-compose.dev.yml $*
 
   test-unit: ## Run unit tests
-  	pytest -v
+   pytest -v
   test-tidy: ## Clean build artifacts
-  	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+   find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
   format-fix: ## Reformat code
-  	ruff format . && ruff check --fix .
+   ruff format . && ruff check --fix .
   format-check: ## Dry-run format check (CI)
-  	ruff format --check . && ruff check .
+   ruff format --check . && ruff check .
 
   lint-check: ## Lint — report issues
-  	ruff check .
+   ruff check .
   lint-fix: ## Lint — auto-correct
-  	ruff check --fix .
+   ruff check --fix .
   ```
 
 ### mise (mise.toml)
+
 - Environment block (`[env]`) at the top of the file
 - Define tasks under `[tasks.<name>]`
 - Use `description`, `depends`, `run` fields
@@ -183,6 +188,7 @@ Use as reference when generating recipes:
 - **Complex parameterized**: bash `case` dispatch on `$1` with per-action logic
 - **No `usage` field**: `usage` with `arg` enforces required args and errors before bash runs. Skip it — handle arg validation in bash instead.
 - **Help on no arg**: When called without an action, print usage with action descriptions and `exit 0` (not `exit 1`). This makes bare `mise run <task>` a discoverable help command.
+
   ```toml
   [tasks.docker]
   description = "Docker operations (build|up|down)"
@@ -259,6 +265,7 @@ Use as reference when generating recipes:
   ```
 
 ### Taskfile.yml (go-task)
+
 - Use `version: '3'`
 - Define under `tasks:` with `desc`, `deps`, `cmds`
 - Group with comment headers
@@ -266,6 +273,7 @@ Use as reference when generating recipes:
 - **Standalone**: single task with `cmds` list
 - **Simple parameterized**: `{{.CLI_ARGS}}` passed through to the underlying tool
 - **Complex parameterized**: internal tasks per action, parent dispatches via `task test-{{.CLI_ARGS}}`
+
   ```yaml
   tasks:
     docker:
@@ -308,11 +316,13 @@ Use as reference when generating recipes:
   ```
 
 ### package.json (npm scripts)
+
 - No native arg dispatch or dep graph
 - Validate: `npm run`
 - **Standalone**: direct command string
 - **Consolidated via colon namespacing**: `"docker:build"`, `"docker:up"`, `"docker:down"` as separate scripts, parent `"docker"` echoes usage
 - **Complex parameterized**: individual `"test:unit"`, `"format:fix"`, `"format:check"` scripts, plus standalone `"lint"`
+
   ```json
   {
     "scripts": {
@@ -330,9 +340,11 @@ Use as reference when generating recipes:
     }
   }
   ```
+
   Note: `npm run` has no arg validation or choices — colon namespacing is the closest equivalent.
 
 ### run.sh (shell script)
+
 - `#!/usr/bin/env bash` with `set -euo pipefail`
 - Each task as `cmd_<name>()` function
 - Dispatch via `main()` with case/declare lookup
@@ -340,6 +352,7 @@ Use as reference when generating recipes:
 - Validate: `./run.sh help`
 - **Standalone**: `cmd_dev()` with direct command
 - **Parameterized**: `cmd_<name>()` takes `$1` as action, inner `case` dispatch
+
   ```bash
   cmd_docker() {
       local action="${1:?Usage: $0 docker <build|up|down>}"
@@ -380,6 +393,7 @@ Use as reference when generating recipes:
 ## Conversion Rules
 
 When converting between formats:
+
 1. **Source of truth**: Read existing runner file first. Parse all tasks, actions, deps, groups, descriptions, parameters.
 2. **Preserve ALL tasks** — standalone and consolidated. Don't drop tasks or flatten consolidated tasks into separate entries.
 3. **Preserve consolidation** — source has `test unit|tidy` as single parameterized task → target must also express it as one entry point (using target format's parameterization mechanism). `format` and `lint` are always separate tasks — do not merge them into `test`.
@@ -391,6 +405,7 @@ When converting between formats:
 9. **Default task** — every format must have help/list command as default entry point.
 
 ## Customization Rules
+
 - **Monorepo**: Multiple languages detected → ask user which is primary. Generate one runner for root or per-workspace.
 - **Existing runner**: Runner file already exists in target format → present diff of proposed changes, ask confirmation before overwriting.
 - **Framework override**: Framework has own conventions (e.g., Next.js `next dev`, Django `manage.py runserver`) → prefer framework-specific commands.
@@ -399,4 +414,5 @@ When converting between formats:
 - **Extra tasks**: Agent MAY add additional consolidated tasks if project clearly benefits — but only when backed by detected project files (see Detection-to-Task Mapping). Don't speculatively generate tasks for capabilities project doesn't have.
 
 ## Report
+
 After generation, output result of format's list command and confirm all recipes functional.

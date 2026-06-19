@@ -1,17 +1,19 @@
 ---
 name: plan
 description: Write detailed, bite-sized implementation plans before touching code
-disable-model-invocation: true
 ---
 # Plan Directive
 
 ## Overview
+
 Write comprehensive implementation plan assuming engineer has zero context for codebase and questionable taste. Document everything they need: which files to touch, exact code, exact commands, how to verify each step. DRY. YAGNI. TDD. Frequent commits.
 
-## Below are what agent MUST do:
+## Below are what agent MUST do
 
 ### Plan Document Header
+
 Every plan MUST start with this header:
+
 ```markdown
 # [Feature Name] Implementation Plan
 
@@ -22,7 +24,9 @@ Every plan MUST start with this header:
 ```
 
 ### Task Structure
+
 Each task MUST follow this format:
+
 ```markdown
 ### Task N: [Component Name]
 
@@ -50,6 +54,7 @@ Expected: PASS
 ```
 
 ### Rules
+
 - **Exact file paths always** — no vague "add to the service file"
 - **Complete code in plan** — not "add validation here"
 - **Exact commands with expected output** — no ambiguity
@@ -57,6 +62,7 @@ Expected: PASS
 - **TDD enforced** — every task starts with failing test
 
 ### Save and Handoff
+
 - Save plan to `docs/plans/YYYY-MM-DD-<feature-name>.md`
 - Commit plan document
 - Announce: "Plan complete. Ready to execute via `/task`."

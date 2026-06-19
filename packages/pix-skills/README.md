@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 23 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 24 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
@@ -24,30 +24,34 @@ Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skil
 
 ## Skills
 
-| Skill | Trigger |
+All skills are model-invocable — pi auto-loads each one on description match. The agent can also load any skill on demand via `read_skills(name=<skill>, full=true)`.
+
+| Skill | Description |
 |---|---|
-| `audit` | manual |
-| `bootstrap` | manual |
-| `brainstorm` | manual |
-| `clone` | auto — git URL / `owner/repo` |
-| `commit` | manual — "commit this", "make a commit" |
-| `debug` | auto — bug / error / doesn't work |
-| `explain` | auto — explain / how does |
-| `finish` | manual |
-| `graphify` | auto — codebase question / architecture |
-| `handoff` | manual |
-| `plan` | auto — plan / design / architect |
-| `readme` | manual |
-| `review` | auto — review / check / audit |
-| `runner` | manual |
-| `search` | auto — search / find / look up |
-| `standup` | manual |
-| `suggest` | auto — suggest / recommend |
-| `task` | auto — task / todo / checklist |
-| `test` | auto — test / spec / coverage |
-| `tldr` | auto — tldr / summarize |
-| `ui` | manual |
-| `verify` | auto — verify / validate / confirm |
+| `ask-user` | Present 2–5 options before high-stakes/irreversible or ambiguous decisions |
+| `audit` | Security audit, integrity check, and secret/vulnerability scan |
+| `bootstrap` | Project and tool scaffolding from authoritative docs |
+| `brainstorm` | Design exploration and spec refinement before implementation |
+| `clone` | Clone any git repo into `/tmp/clones` for read-only exploration |
+| `commit` | Split, write, and maintain Conventional-Commit-style commits |
+| `debug` | Root-cause analysis and self-annealing error resolution |
+| `explain` | Technical deconstruction and logic tracing of existing code |
+| `finish` | Structured branch completion — verify, decide, clean up |
+| `graphify` | Codebase questions via a persistent knowledge graph |
+| `handoff` | Toggle session handoff — write or read+delete `HANDOFF.md` |
+| `notion` | Efficient Notion workspace retrieval — pages, databases, lists |
+| `plan` | Write detailed, bite-sized implementation plans before coding |
+| `readme` | Create or update a deployment-focused README in a fixed style |
+| `review` | Architectural review and quality assurance |
+| `runner` | Generate or convert a task runner (just/make/mise/task/npm/sh) |
+| `search` | Deep logic discovery and project context mapping |
+| `standup` | Prepare a daily standup update from Notion context |
+| `suggest` | Multi-dimensional optimization and improvement recommendations |
+| `task` | Task orchestration and ambiguity resolution |
+| `test` | Test execution, analysis, and failure resolution via TDD |
+| `tldr` | Maximum-density technical summary, zero filler |
+| `ui` | UI/UX design and implementation guidance for frontends |
+| `verify` | Verification before completion — confirm it's actually fixed |
 
 ## Usage
 
