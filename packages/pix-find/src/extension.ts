@@ -1,8 +1,13 @@
+import {
+	createFindToolDefinition,
+	createFindTool as createFindToolFallback,
+	type FindToolInput,
+} from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
 import type {
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerFindTool } from "./find.js";
@@ -10,14 +15,8 @@ import { once } from "./once.ts";
 
 export default function pixFindExtension(pi: PiPrettyApi): void {
 	once("pix-find", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createFindTool = sdk.createFindToolDefinition ?? sdk.createFindTool;
+		const createFindTool = (createFindToolDefinition ??
+			createFindToolFallback) as unknown as ToolFactory<FindToolInput>;
 		if (!createFindTool) return;
 
 		let TextComponent: TextComponentCtor;

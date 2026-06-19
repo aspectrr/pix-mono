@@ -1,8 +1,13 @@
+import {
+	createReadToolDefinition,
+	createReadTool as createReadToolFallback,
+	type ReadToolInput,
+} from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
 import type {
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 
@@ -11,14 +16,8 @@ import { registerReadTool } from "./read.js";
 
 export default function pixReadExtension(pi: PiPrettyApi): void {
 	once("pix-read", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createReadTool = sdk.createReadToolDefinition ?? sdk.createReadTool;
+		const createReadTool = (createReadToolDefinition ??
+			createReadToolFallback) as unknown as ToolFactory<ReadToolInput>;
 		if (!createReadTool) return;
 
 		let TextComponent: TextComponentCtor;

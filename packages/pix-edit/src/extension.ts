@@ -1,3 +1,8 @@
+import {
+	createEditToolDefinition,
+	createEditTool as createEditToolFallback,
+	type EditToolInput,
+} from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
 import {
 	attachResizeListener,
@@ -5,8 +10,8 @@ import {
 } from "@xynogen/pix-pretty/resize";
 import type {
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerEditTool } from "./edit.js";
@@ -14,14 +19,8 @@ import { once } from "./once.ts";
 
 export default function pixEditExtension(pi: PiPrettyApi): void {
 	once("pix-edit", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createEditTool = sdk.createEditToolDefinition ?? sdk.createEditTool;
+		const createEditTool = (createEditToolDefinition ??
+			createEditToolFallback) as unknown as ToolFactory<EditToolInput>;
 		if (!createEditTool) return;
 
 		let TextComponent: TextComponentCtor;

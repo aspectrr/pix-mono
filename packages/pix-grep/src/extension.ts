@@ -1,7 +1,13 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+	createGrepToolDefinition,
+	createGrepTool as createGrepToolFallback,
+	type ExtensionContext,
+	type GrepToolInput,
+	getAgentDir,
+} from "@earendil-works/pi-coding-agent";
 import {
 	CursorStore,
 	fffDestroy,
@@ -12,8 +18,8 @@ import {
 import type {
 	OptionalFffModule,
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { getErrorMessage, shortPath } from "@xynogen/pix-pretty/utils";
 import { registerGrepTool } from "./grep.js";
@@ -21,14 +27,8 @@ import { once } from "./once.ts";
 
 export default function pixGrepExtension(pi: PiPrettyApi): void {
 	once("pix-grep", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createGrepTool = sdk.createGrepToolDefinition ?? sdk.createGrepTool;
+		const createGrepTool = (createGrepToolDefinition ??
+			createGrepToolFallback) as unknown as ToolFactory<GrepToolInput>;
 		if (!createGrepTool) return;
 
 		let TextComponent: TextComponentCtor;
@@ -49,7 +49,7 @@ export default function pixGrepExtension(pi: PiPrettyApi): void {
 
 		try {
 			fffState.module = require("@ff-labs/fff-node") as OptionalFffModule;
-			const agentDir = sdk.getAgentDir?.() ?? join(home, ".pi/agent");
+			const agentDir = getAgentDir?.() ?? join(home, ".pi/agent");
 			fffState.dbDir = getPiPrettyFffDir(agentDir);
 			try {
 				mkdirSync(fffState.dbDir, { recursive: true });
@@ -70,7 +70,7 @@ export default function pixGrepExtension(pi: PiPrettyApi): void {
 			if (!fffState.module) return;
 
 			if (!fffState.dbDir) {
-				const agentDir = sdk.getAgentDir?.() ?? join(home, ".pi/agent");
+				const agentDir = getAgentDir?.() ?? join(home, ".pi/agent");
 				fffState.dbDir = getPiPrettyFffDir(agentDir);
 				try {
 					mkdirSync(fffState.dbDir, { recursive: true });

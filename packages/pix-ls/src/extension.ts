@@ -1,8 +1,13 @@
+import {
+	createLsToolDefinition,
+	createLsTool as createLsToolFallback,
+	type LsToolInput,
+} from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
 import type {
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerLsTool } from "./ls.js";
@@ -10,14 +15,8 @@ import { once } from "./once.ts";
 
 export default function pixLsExtension(pi: PiPrettyApi): void {
 	once("pix-ls", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createLsTool = sdk.createLsToolDefinition ?? sdk.createLsTool;
+		const createLsTool = (createLsToolDefinition ??
+			createLsToolFallback) as unknown as ToolFactory<LsToolInput>;
 		if (!createLsTool) return;
 
 		let TextComponent: TextComponentCtor;

@@ -1,8 +1,13 @@
+import {
+	type BashToolInput,
+	createBashToolDefinition,
+	createBashTool as createBashToolFallback,
+} from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
 import type {
 	PiPrettyApi,
-	PiPrettySdk,
 	TextComponentCtor,
+	ToolFactory,
 } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerBashTool } from "./bash.js";
@@ -10,14 +15,8 @@ import { once } from "./once.ts";
 
 export default function pixBashExtension(pi: PiPrettyApi): void {
 	once("pix-bash", () => {
-		let sdk: PiPrettySdk;
-		try {
-			sdk = require("@earendil-works/pi-coding-agent");
-		} catch {
-			return;
-		}
-
-		const createBashTool = sdk.createBashToolDefinition ?? sdk.createBashTool;
+		const createBashTool = (createBashToolDefinition ??
+			createBashToolFallback) as unknown as ToolFactory<BashToolInput>;
 		if (!createBashTool) return;
 
 		let TextComponent: TextComponentCtor;

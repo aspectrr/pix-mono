@@ -23,6 +23,7 @@
  *   commands/         slash command registrars (fff)
  */
 
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { registerFffCommands } from "./commands/fff.js";
 import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import { fffState } from "./fff.js";
@@ -30,15 +31,7 @@ import { clearHighlightCache } from "./highlight.js";
 import type { PiPrettyApi } from "./types.js";
 
 export default function piPrettyExtension(pi: PiPrettyApi): void {
-	let sdk: { getAgentDir?: () => string };
-	try {
-		sdk = require("@earendil-works/pi-coding-agent");
-	} catch {
-		return;
-	}
-
 	// ── Theme init ──────────────────────────────────────────────────────
-	const getAgentDir = sdk.getAgentDir;
 	setPrettyTheme(
 		(() => {
 			try {
