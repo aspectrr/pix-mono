@@ -347,13 +347,6 @@ export function rtk(
 		const probe = await checkRtkAvailability();
 
 		if (!probe.available) {
-			if (!warnedMissing) {
-				ctx.ui.notify(
-					"RTK binary not found. Install: cargo install rtk-ai",
-					"warning",
-				);
-				warnedMissing = true;
-			}
 			return undefined; // Don't rewrite if rtk not available
 		}
 
