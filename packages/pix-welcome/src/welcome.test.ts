@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	type CheckResult,
+	countSkillsInDirs,
 	LABEL_WIDTH,
 	LOGO_ROWS,
 	PI_IGNORE_RULES,
@@ -125,25 +129,76 @@ describe("summariseSkills", () => {
 		expect(r.detail).toBe("none loaded");
 	});
 
-	it("reports count when skills present", () => {
+	it("reports count when all skills are auto-invocable", () => {
 		const r = summariseSkills([{}, {}, {}]);
 		expect(r.status).toBe("ok");
 		expect(r.detail).toBe("3 loaded");
 	});
 
-	it("excludes skills with disableModelInvocation", () => {
+	it("notes manual skills in detail", () => {
 		const r = summariseSkills([{}, { disableModelInvocation: true }, {}]);
 		expect(r.status).toBe("ok");
-		expect(r.detail).toBe("2 loaded");
+		expect(r.detail).toBe("3 loaded (+1 manual)");
 	});
 
-	it("warns when all skills are disabled", () => {
+	it("marks all-manual as manual", () => {
 		const r = summariseSkills([
 			{ disableModelInvocation: true },
 			{ disableModelInvocation: true },
 		]);
-		expect(r.status).toBe("warn");
-		expect(r.detail).toBe("none loaded");
+		expect(r.status).toBe("ok");
+		expect(r.detail).toBe("2 loaded (manual)");
+	});
+});
+
+describe("countSkillsInDirs", () => {
+	it("returns 0 for nonexistent dirs", () => {
+		expect(countSkillsInDirs(["/nonexistent/path/xyz"])).toBe(0);
+	});
+
+	it("counts flat .md files", () => {
+		const dir = mkdtempSync(join(tmpdir(), "pix-skills-"));
+		try {
+			writeFileSync(
+				join(dir, "commit.md"),
+				"---\nname: commit\ndescription: test\n---\n",
+			);
+			writeFileSync(
+				join(dir, "debug.md"),
+				"---\nname: debug\ndescription: test\n---\n",
+			);
+			expect(countSkillsInDirs([dir])).toBe(2);
+		} finally {
+			rmSync(dir, { recursive: true });
+		}
+	});
+
+	it("counts subdir SKILL.md layout", () => {
+		const dir = mkdtempSync(join(tmpdir(), "pix-skills-"));
+		try {
+			mkdirSync(join(dir, "my-skill"));
+			writeFileSync(
+				join(dir, "my-skill", "SKILL.md"),
+				"---\nname: my-skill\ndescription: test\n---\n",
+			);
+			expect(countSkillsInDirs([dir])).toBe(1);
+		} finally {
+			rmSync(dir, { recursive: true });
+		}
+	});
+
+	it("deduplicates across dirs", () => {
+		const dir = mkdtempSync(join(tmpdir(), "pix-skills-"));
+		try {
+			writeFileSync(
+				join(dir, "foo.md"),
+				"---\nname: foo\ndescription: test\n---\n",
+			);
+			// same dir twice — should still count 1
+			expect(countSkillsInDirs([dir, dir])).toBe(1);
+		} finally {
+			rmSync(dir, { recursive: true });
+		}
 	});
 });
 

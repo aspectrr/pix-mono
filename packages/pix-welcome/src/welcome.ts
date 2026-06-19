@@ -27,6 +27,9 @@
  *   ✓ Ignore  up to date
  */
 
+import { existsSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import type {
 	ExtensionAPI,
 	ExtensionContext,
@@ -174,11 +177,110 @@ interface SkillInfo {
 	disableModelInvocation?: boolean;
 }
 
+/**
+ * Discover all `skills/` directories from:
+ *   1. The pi-agent npm extensions dir (walks one scope level deep)
+ *   2. ~/.pi/agent/skills (user-level)
+ *   3. Any extra dirs passed by the caller
+ *
+ * Mirrors how pi's resource-loader collects skillPaths from resources_discover.
+ * Does NOT depend on before_agent_start — safe to call at session_start.
+ */
+export function discoverSkillDirs(extraDirs: string[] = []): string[] {
+	const npmDir = join(homedir(), ".pi", "agent", "npm", "node_modules");
+	const found: string[] = [];
+
+	// Walk npm extensions dir: flat packages + scoped (@scope/pkg)
+	if (existsSync(npmDir)) {
+		try {
+			for (const pkg of readdirSync(npmDir, { withFileTypes: true })) {
+				if (!pkg.isDirectory() && !pkg.isSymbolicLink()) continue;
+				if (pkg.name.startsWith("@")) {
+					// scoped: walk one level deeper
+					const scopeDir = join(npmDir, pkg.name);
+					try {
+						for (const sub of readdirSync(scopeDir, { withFileTypes: true })) {
+							if (!sub.isDirectory() && !sub.isSymbolicLink()) continue;
+							const skillsDir = join(scopeDir, sub.name, "skills");
+							if (existsSync(skillsDir)) found.push(skillsDir);
+						}
+					} catch {
+						/* skip */
+					}
+				} else {
+					const skillsDir = join(npmDir, pkg.name, "skills");
+					if (existsSync(skillsDir)) found.push(skillsDir);
+				}
+			}
+		} catch {
+			/* skip */
+		}
+	}
+
+	// User-level skills dir
+	const userSkills = join(homedir(), ".pi", "agent", "skills");
+	if (existsSync(userSkills)) found.push(userSkills);
+
+	found.push(...extraDirs);
+	return found;
+}
+
+/**
+ * Count skills in an explicit list of skill directories.
+ * Deduplicates by resolved real path to avoid double-counting symlinked packages.
+ */
+export function countSkillsInDirs(dirs: string[]): number {
+	let total = 0;
+	const seen = new Set<string>();
+
+	const add = (p: string) => {
+		const real = (() => {
+			try {
+				return resolve(p);
+			} catch {
+				return p;
+			}
+		})();
+		if (seen.has(real)) return;
+		seen.add(real);
+		total++;
+	};
+
+	for (const dir of dirs) {
+		if (!existsSync(dir)) continue;
+		try {
+			for (const entry of readdirSync(dir, { withFileTypes: true })) {
+				if (entry.isDirectory()) {
+					const skillMd = join(dir, entry.name, "SKILL.md");
+					if (existsSync(skillMd)) add(skillMd);
+				} else if (entry.isFile() && entry.name.endsWith(".md")) {
+					add(join(dir, entry.name));
+				}
+			}
+		} catch {
+			/* skip */
+		}
+	}
+	return total;
+}
+
+/** Count skills across all auto-discovered + extra dirs. */
+export function countSkillsFromDirs(extraDirs: string[] = []): number {
+	return countSkillsInDirs(discoverSkillDirs(extraDirs));
+}
+
 export function summariseSkills(skills: SkillInfo[]): CheckResult {
-	const count = skills.filter((s) => !s.disableModelInvocation).length;
-	return count > 0
-		? { label: "Skills", status: "ok", detail: `${count} loaded` }
-		: { label: "Skills", status: "warn", detail: "none loaded" };
+	const total = skills.length;
+	if (total === 0)
+		return { label: "Skills", status: "warn", detail: "none loaded" };
+	const manual = skills.filter((s) => s.disableModelInvocation).length;
+	const detail =
+		manual === total
+			? `${total} loaded (manual)`
+			: manual > 0
+				? `${total} loaded (+${manual} manual)`
+				: `${total} loaded`;
+	return { label: "Skills", status: "ok", detail };
 }
 
 interface ToolInfo {
@@ -357,7 +459,7 @@ export default function (pi: ExtensionAPI) {
 			requestRender?.();
 		};
 
-		// Expose skills updater so the before_agent_start handler can fill it in.
+		// Expose skills updater so the before_agent_start handler can refine the count.
 		_updateSkills = (r: CheckResult) => update(4, r);
 
 		void checkPiVersion(pi).then((r) => update(0, r));
@@ -366,31 +468,26 @@ export default function (pi: ExtensionAPI) {
 
 		// Tools register during session_start (incl. other extensions); read on
 		// next tick so dynamically registered tools are counted.
-		setTimeout(
-			() =>
-				update(
-					3,
-					checkTools(pi as unknown as { getActiveTools?: () => ToolInfo[] }),
-				),
-			0,
-		);
+		// Skills: scan dirs immediately — no need to wait for before_agent_start.
+		setTimeout(() => {
+			update(
+				3,
+				checkTools(pi as unknown as { getActiveTools?: () => ToolInfo[] }),
+			);
+			update(4, {
+				label: "Skills",
+				status: "ok",
+				detail: `${countSkillsFromDirs()} loaded`,
+			});
+		}, 0);
 	});
 
-	// Skills count is only available once resources_discover has run, which
-	// happens after session_start. Grab it from the first before_agent_start
-	// (guaranteed to have skills in systemPromptOptions) and update the banner.
-	let skillsChecked = false;
-	pi.on("before_agent_start", (event) => {
-		if (skillsChecked) return;
-		skillsChecked = true;
+	// before_agent_start fires after resources_discover — use the authoritative
+	// skills list from systemPromptOptions to refine the count, then dismiss.
+	pi.on("before_agent_start", (event, ctx) => {
 		const skills = event.systemPromptOptions?.skills ?? [];
-		const result = summariseSkills(skills);
-		// Banner may already be dismissed by the time the first prompt fires —
-		// update anyway so it's accurate if still visible.
-		requestRender?.();
-		// Reach into CHECKS via the closure captured above per session.
-		// We store the updater so each session's banner is independent.
-		_updateSkills?.(result);
+		if (skills.length > 0) _updateSkills?.(summariseSkills(skills));
+		dismiss(ctx);
 	});
 
 	pi.on("turn_start", (_event, ctx) => {
