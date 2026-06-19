@@ -246,6 +246,16 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 	});
 }
 
+function registerResourcesDiscover(pi: ExtensionAPI): void {
+	const root = skillsRoot();
+	pi.on("resources_discover", () => ({
+		skillPaths: existsSync(root) ? [root] : [],
+	}));
+}
+
 export default function (pi: ExtensionAPI): void {
-	once("pix-skills", () => registerSkillLoader(pi));
+	once("pix-skills", () => {
+		registerSkillLoader(pi);
+		registerResourcesDiscover(pi);
+	});
 }
