@@ -1,21 +1,22 @@
 name: Publish
 
 on:
-  push:
-    tags:
-      # Format: release-YYYYMMDD-HHMM
-      # Generate: TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"
-      - "release-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]"
+  # Fires after CI completes on main — no duplicate quality gate.
+  # The publish job checks that a release tag points to the validated SHA.
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
   # Manual fallback from the Actions tab.
   workflow_dispatch:
 
 jobs:
-  # Re-run the full quality gate so a tag can never publish unverified code.
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   publish:
-    needs: ci
+    # For workflow_run: only proceed when CI passed.
+    # For workflow_dispatch: always proceed (operator takes responsibility).
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,31 +24,48 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Check out the exact SHA CI validated (not the default branch tip).
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      # Check whether a release tag points at this commit.
+      # If none found, skip publish silently — this is a plain main push, not a release.
+      - name: Check for release tag on this commit
+        id: tag
+        run: |
+          TAG=$(git tag --points-at HEAD | grep -E '^release-[0-9]{8}-[0-9]{4}$' | head -1)
+          echo "value=$TAG" >> "$GITHUB_OUTPUT"
+          if [ -z "$TAG" ]; then
+            echo "No release tag on this commit — skipping publish."
+          else
+            echo "Release tag found: $TAG"
+          fi
 
       - uses: oven-sh/setup-bun@v2
+        if: steps.tag.outputs.value != ''
         with:
           bun-version: latest
 
-      # Node 24 ships an npm new enough for OIDC trusted publishing. The
-      # registry-url is required so the npm CLI knows the publish target and
-      # engages OIDC; without it the CLI falls back to ENEEDAUTH (npm/cli#8730).
       - uses: actions/setup-node@v5
+        if: steps.tag.outputs.value != ''
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      # Belt-and-suspenders: ensure npm CLI >= 11.5.1 for trusted publishing.
       - name: Upgrade npm for trusted publishing
+        if: steps.tag.outputs.value != ''
         run: npm install -g npm@latest
 
       - name: Install dependencies
+        if: steps.tag.outputs.value != ''
         run: bun install --frozen-lockfile
 
       # Publishes every package whose version is not yet on npm (idempotent).
       # Authentication is via OIDC trusted publishing (no NPM_TOKEN); provenance
       # is attached automatically.
       - name: Publish changed packages to npm
+        if: steps.tag.outputs.value != ''
         run: bun run publish:all
         env:
-          # Force provenance for OIDC trusted publishing (npm/cli#8730).
           NPM_CONFIG_PROVENANCE: "true"
