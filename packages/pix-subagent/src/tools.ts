@@ -296,12 +296,10 @@ export function createAgentTool(
 
 			const stats = buildStats(details, theme);
 
-			// Streaming / running
+			// Streaming / running — live state shown by the ● Agents widget, so the
+			// inline transcript stays empty to avoid stacking one card per agent.
 			if (isPartial || details.status === "running") {
-				const frame = SPINNER[details.spinnerFrame ?? 0];
-				let line = theme.fg("accent", frame) + (stats ? ` ${stats}` : "");
-				line += `\n${theme.fg("dim", `  ⎿  ${details.activity ?? "thinking…"}`)}`;
-				return new Text(line, 0, 0);
+				return new Text("", 0, 0);
 			}
 
 			// Background launched

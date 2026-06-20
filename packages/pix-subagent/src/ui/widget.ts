@@ -133,8 +133,8 @@ export class AgentWidget {
 	private uiCtx: UICtx | undefined;
 	private widgetFrame = 0;
 	private widgetInterval: ReturnType<typeof setInterval> | undefined;
-	private finishedTurnAge = new Map<string, number>();
-	private static readonly ERROR_LINGER_TURNS = 2;
+	private static readonly FINISHED_LINGER_MS = 5_000;
+	private static readonly ERROR_LINGER_MS = 15_000;
 	private widgetRegistered = false;
 	private tui: unknown = undefined;
 	private lastStatusText: string | undefined;
@@ -154,9 +154,6 @@ export class AgentWidget {
 	}
 
 	onTurnStart() {
-		for (const [id, age] of this.finishedTurnAge) {
-			this.finishedTurnAge.set(id, age + 1);
-		}
 		this.update();
 	}
 
@@ -166,18 +163,14 @@ export class AgentWidget {
 		}
 	}
 
-	private shouldShowFinished(agentId: string, status: string): boolean {
-		const age = this.finishedTurnAge.get(agentId) ?? 0;
-		const maxAge = ERROR_STATUSES.has(status)
-			? AgentWidget.ERROR_LINGER_TURNS
-			: 1;
-		return age < maxAge;
-	}
-
-	markFinished(agentId: string) {
-		if (!this.finishedTurnAge.has(agentId)) {
-			this.finishedTurnAge.set(agentId, 0);
-		}
+	private shouldShowFinished(status: string, completedAt: number): boolean {
+		// Linger a few seconds after finish, then drop. The ✓ … Done line in the
+		// transcript is the permanent record; errors stay longer so failures are
+		// noticed. The 80ms widget timer re-evaluates this continuously.
+		const linger = ERROR_STATUSES.has(status)
+			? AgentWidget.ERROR_LINGER_MS
+			: AgentWidget.FINISHED_LINGER_MS;
+		return Date.now() - completedAt < linger;
 	}
 
 	private renderFinishedLine(
@@ -246,8 +239,8 @@ export class AgentWidget {
 			(a) =>
 				a.status !== "running" &&
 				a.status !== "queued" &&
-				a.completedAt &&
-				this.shouldShowFinished(a.id, a.status),
+				a.completedAt != null &&
+				this.shouldShowFinished(a.status, a.completedAt),
 		);
 
 		if (running.length === 0 && queued.length === 0 && finished.length === 0)
@@ -403,7 +396,10 @@ export class AgentWidget {
 		for (const a of allAgents) {
 			if (a.status === "running") runningCount++;
 			else if (a.status === "queued") queuedCount++;
-			else if (a.completedAt && this.shouldShowFinished(a.id, a.status))
+			else if (
+				a.completedAt != null &&
+				this.shouldShowFinished(a.status, a.completedAt)
+			)
 				hasFinished = true;
 		}
 		const hasActive = runningCount > 0 || queuedCount > 0;
@@ -421,10 +417,6 @@ export class AgentWidget {
 			if (this.widgetInterval) {
 				clearInterval(this.widgetInterval);
 				this.widgetInterval = undefined;
-			}
-			for (const [id] of this.finishedTurnAge) {
-				if (!allAgents.some((a) => a.id === id))
-					this.finishedTurnAge.delete(id);
 			}
 			return;
 		}

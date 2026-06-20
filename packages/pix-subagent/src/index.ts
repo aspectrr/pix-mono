@@ -86,7 +86,6 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 		// onComplete — fire subagent-notification nudge for each finished bg agent
 		(record) => {
 			agentActivity.delete(record.id);
-			widget.markFinished(record.id);
 
 			if (record.resultConsumed) {
 				widget.update();
