@@ -14,7 +14,7 @@ import { registerFindTool } from "./find.js";
 import { once } from "./once.ts";
 
 export default function pixFindExtension(pi: PiPrettyApi): void {
-	once("pix-find", () => {
+	once(pi, "pix-find", () => {
 		const createFindTool = (createFindToolDefinition ??
 			createFindToolFallback) as unknown as ToolFactory<FindToolInput>;
 		if (!createFindTool) return;

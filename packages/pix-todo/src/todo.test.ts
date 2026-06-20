@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import registerTodo, { renderTodoLines, type TodoItem } from "./todo.ts";
 
-// registerTodo wraps its body in once("pix-todo") — a process-wide globalThis
-// guard that dedupes activation across pix-core + a standalone install. Tests
-// re-register a fresh host per case, so clear the registry first to let each
-// registerTodo run (mirrors pix-core/once.test.ts clearing __pixLoaded).
+// registerTodo wraps its body in once(pi, "pix-todo") — a per-instance
+// WeakMap guard that dedupes activation across pix-core + a standalone install.
+// Tests re-register a fresh host per case. Clear the registry between tests so
+// that the same pi object can be re-used without cross-test interference.
 beforeEach(() => {
-	delete (globalThis as { __pixLoaded?: Set<string> }).__pixLoaded;
+	delete (globalThis as { __pixOnce?: WeakMap<object, Set<string>> }).__pixOnce;
 });
 
 // Stub theme tags each fragment with its color/bold so assertions can verify

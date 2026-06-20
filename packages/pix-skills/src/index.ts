@@ -254,7 +254,7 @@ function registerResourcesDiscover(pi: ExtensionAPI): void {
 }
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-skills", () => {
+	once(pi, "pix-skills", () => {
 		registerSkillLoader(pi);
 		registerResourcesDiscover(pi);
 	});

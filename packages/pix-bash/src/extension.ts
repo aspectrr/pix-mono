@@ -14,7 +14,7 @@ import { registerBashTool } from "./bash.js";
 import { once } from "./once.ts";
 
 export default function pixBashExtension(pi: PiPrettyApi): void {
-	once("pix-bash", () => {
+	once(pi, "pix-bash", () => {
 		const createBashTool = (createBashToolDefinition ??
 			createBashToolFallback) as unknown as ToolFactory<BashToolInput>;
 		if (!createBashTool) return;

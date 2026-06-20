@@ -14,7 +14,7 @@ import { registerLsTool } from "./ls.js";
 import { once } from "./once.ts";
 
 export default function pixLsExtension(pi: PiPrettyApi): void {
-	once("pix-ls", () => {
+	once(pi, "pix-ls", () => {
 		const createLsTool = (createLsToolDefinition ??
 			createLsToolFallback) as unknown as ToolFactory<LsToolInput>;
 		if (!createLsTool) return;

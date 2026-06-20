@@ -26,7 +26,7 @@ import { registerGrepTool } from "./grep.js";
 import { once } from "./once.ts";
 
 export default function pixGrepExtension(pi: PiPrettyApi): void {
-	once("pix-grep", () => {
+	once(pi, "pix-grep", () => {
 		const createGrepTool = (createGrepToolDefinition ??
 			createGrepToolFallback) as unknown as ToolFactory<GrepToolInput>;
 		if (!createGrepTool) return;

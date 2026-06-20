@@ -15,7 +15,7 @@ import { once } from "./once.ts";
 import { registerReadTool } from "./read.js";
 
 export default function pixReadExtension(pi: PiPrettyApi): void {
-	once("pix-read", () => {
+	once(pi, "pix-read", () => {
 		const createReadTool = (createReadToolDefinition ??
 			createReadToolFallback) as unknown as ToolFactory<ReadToolInput>;
 		if (!createReadTool) return;

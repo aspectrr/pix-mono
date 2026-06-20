@@ -34,7 +34,7 @@ export type {
 // ── Tool registration ──────────────────────────────────────────────────
 
 export default function registerAsk(pi: ExtensionAPI): void {
-	once("pix-ask", () => {
+	once(pi, "pix-ask", () => {
 		pi.registerTool({
 			name: "ask_user",
 			label: "Ask",

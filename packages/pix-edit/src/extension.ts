@@ -18,7 +18,7 @@ import { registerEditTool } from "./edit.js";
 import { once } from "./once.ts";
 
 export default function pixEditExtension(pi: PiPrettyApi): void {
-	once("pix-edit", () => {
+	once(pi, "pix-edit", () => {
 		const createEditTool = (createEditToolDefinition ??
 			createEditToolFallback) as unknown as ToolFactory<EditToolInput>;
 		if (!createEditTool) return;

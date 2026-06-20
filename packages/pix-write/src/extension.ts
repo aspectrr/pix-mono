@@ -19,7 +19,7 @@ import { once } from "./once.ts";
 import { registerWriteTool } from "./write.js";
 
 export default function pixWriteExtension(pi: PiPrettyApi): void {
-	once("pix-write", () => {
+	once(pi, "pix-write", () => {
 		const createWriteTool = (createWriteToolDefinition ??
 			createWriteToolFallback) as unknown as ToolFactory<WriteToolInput>;
 		if (!createWriteTool) return;

@@ -69,7 +69,7 @@ const parseItems = (raw: string): string[] =>
 		.filter(Boolean);
 
 export default function registerTodo(pi: ExtensionAPI): void {
-	once("pix-todo", () => {
+	once(pi, "pix-todo", () => {
 		let todos: TodoItem[] = [];
 		let nextTodoId = 1;
 
