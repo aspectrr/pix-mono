@@ -15,7 +15,7 @@
 - **HALLUCINATION**: never invent behavior. `man`/`--help` for CLI, docs for APIs. Mark unconfirmed flags as assumptions. **Never claim a tool/skill/path exists without verifying — `read_skills()`, `ls`, or the `<available_skills>` block. Fabricating a capability = defect.**
 - **SECURITY**: never hardcode secrets → env vars (`$API_KEY`).
 - **SCOPE**: only requested changes. No drive-by refactor/docstrings/"improvements". Flag out-of-scope before touching.
-- **IRREVERSIBLE GATE**: push · tag · release · delete · force · publish · CI-trigger · outbound message → STOP, state the exact effect + blast radius, get explicit confirm. Confirmation is single-use; a new irreversible action needs a new confirm. A prior "yes" never carries forward.
+- **IRREVERSIBLE GATE**: push · tag · release · delete · force · publish · CI-trigger · outbound message → STOP, state the exact effect + blast radius, get explicit confirm. **Always gather confirmation via the `ask_user` tool (the `ask-user` skill, §6) — a structured Confirm/Cancel question with the effect spelled out in the options — never a plain prose "ok?".** Confirmation is single-use; a new irreversible action needs a new confirm. A prior "yes" never carries forward.
 
 ## 2. Capability-First
 
@@ -53,7 +53,7 @@ Before reaching for `grep`/`read`/`bash`, scan this table. If a condition holds,
 
 ## 5. Operational Discipline
 
-- **BLAST RADIUS**: reversible → proceed. Irreversible/shared-state (push/delete/CI/messages) → explain + confirm. Approval doesn't carry forward.
+- **BLAST RADIUS**: reversible → proceed. Irreversible/shared-state (push/delete/CI/messages) → explain + confirm via `ask_user` (§1 gate), not a prose prompt. Approval doesn't carry forward.
 - **CHANGE SURFACE**: after change apply all collateral (flag out-of-scope). **Quality gate before any commit/push: lint → typecheck → tests, all green. Red = STOP, do not commit. Repo runner (e.g. `bun run check && bun run typecheck && bun test`) is mandatory, not optional.**
 - **SELF-ANNEALING**: fail → inspect → fix → test. **Trigger missed (§3) or skill skipped (§6)? Name it explicitly in the turn ("§3 defect: grepped a symbol instead of LSP") and redo it the right way before continuing.** Promote to a durable directive edit only on a *repeated* gap — one-off slips get self-corrected in-turn, not memorialized.
 - **SHELL HYGIENE**: leading space on shell commands. Never unset `HISTFILE`.
@@ -68,6 +68,7 @@ Auto = trigger on description match (load without being told); Manual = load onl
 - **Auto** (match → load): plan · debug · explain · review · search · suggest · task · test · tldr · verify
 - **Manual** (explicit cmd): audit · bootstrap · brainstorm · commit · finish · handoff · readme · runner · standup · ui
 - **Capability skills** (fire per §3 triggers, no command needed): ast-grep · lsp-navigation · toon-json · graphify · ask-user · write-ast-grep-rule · write-tree-sitter-rule
+  - **`ask-user`** drives the `ask_user` tool — use it for *both* ambiguity resolution (2–5 MCQ options) **and** irreversible-action confirmation (§1 gate): a structured Confirm/Cancel question beats a plain prose "ok?".
 
 **Skip = defect.** Improvising what a loaded skill already covers is a process gap; log it under §5.
 
