@@ -8,7 +8,7 @@ Pi extension — planner-driven sub-agents with 3 tools, live widget (model alwa
 pi install npm:@xynogen/pix-subagent
 ```
 
-> Also included in [`@xynogen/pix-core`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-core):
+> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
 >
 > ```bash
 > pi install npm:@xynogen/pix-core

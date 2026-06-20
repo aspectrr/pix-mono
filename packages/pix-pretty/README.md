@@ -75,6 +75,8 @@ Paste chip formatting and reasoning tag rendering are original additions with no
 
 ## Full distro
 
+Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash

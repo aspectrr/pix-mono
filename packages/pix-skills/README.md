@@ -119,6 +119,8 @@ pi install ./packages/pix-skills
 
 ## Full distro
 
+Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash

@@ -41,6 +41,8 @@ rules as the bash tool (auto-deny on match, no prompt).
 
 ## Full distro
 
+Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
