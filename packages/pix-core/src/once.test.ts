@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+import registerSubagent from "@xynogen/pix-subagent/src/extension.ts";
 import registerTodo from "@xynogen/pix-todo/src/todo.ts";
 
 // Mirror of the per-instance guard. pix-core does not own once.ts (each member
@@ -139,5 +140,42 @@ describe("member factory dedupe (pix-todo)", () => {
 		registerTodo(pi2);
 		expect(tools1).toEqual(["todo"]);
 		expect(tools2).toEqual(["todo"]);
+	});
+});
+
+describe("member factory dedupe (pix-subagent)", () => {
+	function makeHost() {
+		const toolNames: string[] = [];
+		const pi = {
+			registerTool(def: { name: string }) {
+				toolNames.push(def.name);
+			},
+			appendEntry() {},
+			on() {},
+			getAvailableAgentTypes() {
+				return [];
+			},
+			getAvailableModels() {
+				return [];
+			},
+			registerMessageRenderer() {},
+		} as never;
+		return { pi, toolNames };
+	}
+
+	it("registers agent tools once across core + standalone activation (same pi)", () => {
+		const { pi, toolNames } = makeHost();
+		registerSubagent(pi);
+		registerSubagent(pi);
+		expect(toolNames).toEqual(["agent", "agent_result", "agent_steer"]);
+	});
+
+	it("registers agent tools again for a fresh pi instance (/new rehydration)", () => {
+		const { pi: pi1, toolNames: tools1 } = makeHost();
+		const { pi: pi2, toolNames: tools2 } = makeHost();
+		registerSubagent(pi1);
+		registerSubagent(pi2);
+		expect(tools1).toEqual(["agent", "agent_result", "agent_steer"]);
+		expect(tools2).toEqual(["agent", "agent_result", "agent_steer"]);
 	});
 });

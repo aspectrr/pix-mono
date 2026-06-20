@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-core",
-	"version": "0.4.4",
+	"version": "0.4.5",
 	"description": "Pi extension bundle — installs and activates all core pix-* extensions",
 	"type": "module",
 	"main": "src/extension.ts",
@@ -57,7 +57,8 @@
 		"@xynogen/pix-todo": "*",
 		"@xynogen/pix-ask": "*",
 		"@xynogen/pix-optimizer": "*",
-		"@xynogen/pix-gate": "*"
+		"@xynogen/pix-gate": "*",
+		"@xynogen/pix-subagent": "*"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

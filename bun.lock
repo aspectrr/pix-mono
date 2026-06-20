@@ -76,6 +76,7 @@
         "@xynogen/pix-prompts": "*",
         "@xynogen/pix-read": "*",
         "@xynogen/pix-skills": "*",
+        "@xynogen/pix-subagent": "*",
         "@xynogen/pix-todo": "*",
         "@xynogen/pix-update": "*",
         "@xynogen/pix-welcome": "*",

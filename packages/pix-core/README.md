@@ -44,6 +44,7 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 |---|---|
 | `pix-optimizer` | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
 | `pix-gate` | Permission gate for dangerous bash commands |
+| `pix-subagent` | `agent` / `agent_result` / `agent_steer` — planner-driven sub-agents with live widget |
 
 ## Install
 

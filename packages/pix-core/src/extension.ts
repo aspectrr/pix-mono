@@ -28,6 +28,7 @@ import registerOptimizer from "@xynogen/pix-optimizer/src/index.ts";
 import registerPrompts from "@xynogen/pix-prompts/src/extension.ts";
 import registerRead from "@xynogen/pix-read/src/extension.ts";
 import registerSkills from "@xynogen/pix-skills/src/index.ts";
+import registerSubagent from "@xynogen/pix-subagent/src/extension.ts";
 import registerTodo from "@xynogen/pix-todo/src/index.ts";
 import registerUpdate from "@xynogen/pix-update/src/extension.ts";
 import registerWelcome from "@xynogen/pix-welcome/src/extension.ts";
@@ -59,6 +60,7 @@ const MEMBERS: Factory[] = [
 	registerAsk,
 	registerOptimizer,
 	registerGate,
+	registerSubagent,
 ];
 
 export default function (pi: ExtensionAPI): void {
