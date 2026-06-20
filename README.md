@@ -43,7 +43,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode (`/opt`) |
 | [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
 
 ### Tool suite
@@ -144,6 +144,7 @@ Several packages here originated as forks or merges of community Pi packages:
 |---|---|
 | `pi-caveman` | starting point for the `pix-optimizer` caveman-mode rewrite |
 | `npm:pi-rtk-optimizer` | merged into `pix-optimizer` |
+| [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail) | ruleset adapted as ponytail mode in `pix-optimizer` |
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
 | `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-core` |
