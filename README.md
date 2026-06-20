@@ -6,7 +6,11 @@ Monorepo of Pix, a distro of [Pi Coding Agent](https://github.com/badlogic/pi-mo
 
 ## Packages
 
-### Libraries
+### Core bundle
+
+Bundled together by [`@xynogen/pix-core`](packages/pix-core) — a single `pi install npm:@xynogen/pix-core` pulls and activates all of these.
+
+**Libraries**
 
 Shared dependencies pulled in automatically — install directly only if you need them standalone.
 
@@ -15,15 +19,11 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (models.dev + BenchLM), cached at `~/.cache/pi` |
 | [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
 
-### Theme
+**Theme**
 
 | Package | Description |
 | --- | --- |
 | [`@xynogen/pix-themes`](packages/pix-themes) | Theme pack — 7 dark themes |
-
-### Core bundle
-
-Bundled together by [`@xynogen/pix-core`](packages/pix-core) — a single `pi install npm:@xynogen/pix-core` pulls and activates all of these.
 
 **UI / UX extensions**
 
@@ -39,9 +39,16 @@ Bundled together by [`@xynogen/pix-core`](packages/pix-core) — a single `pi in
 | [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — `AGENTS.md` baseline + repo directive files |
 | [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 23 bundled skills) |
 
-**Tool suite**
+**Behaviour**
 
-Drop-in replacements for the tools Pi exposes to the model (`read`, `write`, `edit`, `find`, `grep`, `ls`, `bash`, `todo`, `ask_user`). Each registers under the **same tool name** as the Pi built-in, so the model calls them transparently — no prompt changes needed. The only difference is the rendered output: syntax highlighting, side-by-side diffs, icon trees, and FFF-accelerated search, all via [`pix-pretty`](packages/pix-pretty). Install `pix-core` and the whole suite is active; the built-ins are shadowed.
+| Package | Description |
+| --- | --- |
+| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+
+### Tool suite
+
+Bundled by `pix-core`. Drop-in replacements for the tools Pi exposes to the model (`read`, `write`, `edit`, `find`, `grep`, `ls`, `bash`, `todo`, `ask_user`). Each registers under the **same tool name** as the Pi built-in, so the model calls them transparently — no prompt changes needed. The only difference is the rendered output: syntax highlighting, side-by-side diffs, icon trees, and FFF-accelerated search, all via [`pix-pretty`](packages/pix-pretty). Install `pix-core` and the whole suite is active; the built-ins are shadowed.
 
 | Package | Description |
 | --- | --- |
@@ -53,14 +60,7 @@ Drop-in replacements for the tools Pi exposes to the model (`read`, `write`, `ed
 | [`@xynogen/pix-grep`](packages/pix-grep) | `grep` — pattern search with FFF-prioritised results |
 | [`@xynogen/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
 | [`@xynogen/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
-| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
-
-**Behaviour**
-
-| Package | Description |
-| --- | --- |
-| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
-| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction (plan-mode seeding currently broken) |
 
 ### Standalone extensions (opt-in)
 
@@ -71,6 +71,16 @@ Not bundled by `pix-core` — install each only if you want it. These are delibe
 | [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools — needs a 9Router API key, so only useful if you route through 9Router |
 | [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
 | [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
+
+### Roadmap — third-party extensions
+
+Upstream Pi community extensions we currently lean on. The future-development goal is to fork or rewrite these as first-class `@xynogen/pix-*` packages so they're maintained and bundled in-house.
+
+| Package | Description |
+| --- | --- |
+| [`pi-lens`](https://github.com/apmantza/pi-lens) | Real-time code feedback — LSP navigation/diagnostics, linters, formatters, type-checking, structural (ast-grep) analysis |
+| [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter) | MCP (Model Context Protocol) adapter — connect Pi to external MCP servers and call their tools |
+| [`pi-subagents`](https://github.com/nicobailon/pi-subagents) | Delegate tasks to subagents — single/chain/parallel/async runs with TUI clarification |
 
 ## Install
 
@@ -132,8 +142,7 @@ Several packages here originated as forks or merges of community Pi packages:
 
 | Upstream | Disposition |
 |---|---|
-| `npm:pi-caveman` | replaced by `git:github.com/jonjonrankin/pi-caveman` fork |
-| `git:github.com/jonjonrankin/pi-caveman` | merged into `pix-optimizer` |
+| `pi-caveman` | starting point for the `pix-optimizer` caveman-mode rewrite |
 | `npm:pi-rtk-optimizer` | merged into `pix-optimizer` |
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
