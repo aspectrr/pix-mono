@@ -78,6 +78,12 @@ refactor(api): extract response builder from handler
 - Squash/amend/reorder to keep history clean. Remove WIP commits.
 - Never rewrite pushed history without explicit confirmation (irreversible for collaborators).
 
+### Phase 6: Offer push
+
+- After successful commit, ask whether to push now so interaction stays short.
+- Do **not** push automatically. `git push` is irreversible/shared-state; require explicit confirmation for that exact push.
+- If user says yes, push current branch and report result.
+
 ## Authorship Rule
 
 - Commits authored solely by user's git config identity.
