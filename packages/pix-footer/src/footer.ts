@@ -307,6 +307,7 @@ export default function (pi: ExtensionAPI) {
 
 	let gitStatus: GitStatus | null = null;
 	let gitTimer: ReturnType<typeof setInterval> | null = null;
+	let currentCwd = "";
 
 	// ── TPS tracking ──────────────────────────────────────────────
 
@@ -444,10 +445,12 @@ export default function (pi: ExtensionAPI) {
 	// ── Footer registration ──────────────────────────────────────
 
 	pi.on("session_start", (_event, ctx) => {
-		void refreshGit(ctx.cwd);
+		currentCwd = ctx.cwd;
+		void refreshGit(currentCwd);
 		if (gitTimer) clearInterval(gitTimer);
 		gitTimer = setInterval(() => {
-			void refreshGit(ctx.cwd);
+			// ponytail: currentCwd avoids capturing stale ctx after session replacement
+			if (currentCwd) void refreshGit(currentCwd);
 		}, GIT_POLL_MS);
 
 		ctx.ui.setFooter(
