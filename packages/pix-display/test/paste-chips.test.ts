@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { endsWithMarker, restyleMarkers } from "./paste-chips";
+import { endsWithMarker, restyleMarkers } from "../src/paste-chips.js";
 
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 

@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { splitThinking, stripPartialTailTag } from "./thinking";
+import { splitThinking, stripPartialTailTag } from "../src/thinking.js";
 
 type Block = { type: string; text?: string; thinking?: string };
 

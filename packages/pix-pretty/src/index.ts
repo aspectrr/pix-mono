@@ -1,26 +1,8 @@
 /**
  * pi-pretty — Pretty terminal output for pi built-in tools.
  *
- * Entry point: initialises theme + highlight cache, registers FFF slash
- * commands (/fff-rescan etc.). Individual tool renderers live in the
- * standalone pix-{read,bash,ls,find,grep,edit,write} packages — each
- * self-registers via its own pi extension entry point.
- *
- * Modules:
- *   types.ts          shared interfaces/types
- *   config.ts         theme + thresholds
- *   ansi.ts           ANSI codes, low-contrast fix
- *   utils.ts          helpers + renderToolError
- *   lang.ts           language detection
- *   icons.ts          Nerd Font file-type icons
- *   highlight.ts      cli-highlight engine + ANSI cache
- *   renderers.ts      renderFileContent/Bash/Tree/Find/Grep
- *   fff.ts            Fast File Finder + cursor store + module singleton
- *   diff.ts           unified diff parser
- *   diff-render.ts    split/word-level diff renderer
- *   resize.ts         terminal resize invalidation registry
- *   tools/            per-tool registrar helpers (context type)
- *   commands/         slash command registrars (fff)
+ * Pure rendering library — no Pi lifecycle hooks or extensions.
+ * UI features (paste chips, thinking blocks) live in pix-display.
  */
 
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
@@ -48,3 +30,9 @@ export default function piPrettyExtension(pi: PiPrettyApi): void {
 	// Commands become available once pix-grep initialises the finder.
 	registerFffCommands(pi, fffState);
 }
+
+/**
+ * piPrettyExtension still exports a default function for packages that
+ * import it as an extension (pix-core activates it for theme + FFF).
+ * UI extensions (paste-chips, thinking) moved to pix-display.
+ */

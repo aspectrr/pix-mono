@@ -64,6 +64,7 @@
         "@xynogen/pix-bash": "*",
         "@xynogen/pix-commands": "*",
         "@xynogen/pix-diagnostics": "*",
+        "@xynogen/pix-display": "*",
         "@xynogen/pix-edit": "*",
         "@xynogen/pix-find": "*",
         "@xynogen/pix-footer": "*",
@@ -97,6 +98,17 @@
     "packages/pix-diagnostics": {
       "name": "@xynogen/pix-diagnostics",
       "version": "0.1.4",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
+    "packages/pix-display": {
+      "name": "@xynogen/pix-display",
+      "version": "0.1.0",
+      "dependencies": {
+        "@xynogen/pix-pretty": "*",
+      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -191,7 +203,7 @@
     },
     "packages/pix-pretty": {
       "name": "@xynogen/pix-pretty",
-      "version": "1.6.3",
+      "version": "1.6.4",
       "dependencies": {
         "@ff-labs/fff-node": "^0.5.2",
         "cli-highlight": "^2.1.11",
@@ -493,6 +505,8 @@
     "@xynogen/pix-data": ["@xynogen/pix-data@workspace:packages/pix-data"],
 
     "@xynogen/pix-diagnostics": ["@xynogen/pix-diagnostics@workspace:packages/pix-diagnostics"],
+
+    "@xynogen/pix-display": ["@xynogen/pix-display@workspace:packages/pix-display"],
 
     "@xynogen/pix-edit": ["@xynogen/pix-edit@workspace:packages/pix-edit"],
 
