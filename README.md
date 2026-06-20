@@ -142,7 +142,7 @@ Several packages here originated as forks or merges of community Pi packages:
 
 | Upstream | Disposition |
 |---|---|
-| `pi-caveman` | starting point for the `pix-optimizer` caveman-mode rewrite |
+| [`npm:pi-caveman`](https://www.npmjs.com/package/pi-caveman) | starting point for the `pix-optimizer` caveman-mode rewrite |
 | `npm:pi-rtk-optimizer` | merged into `pix-optimizer` |
 | [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail) | ruleset adapted as ponytail mode in `pix-optimizer` |
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
