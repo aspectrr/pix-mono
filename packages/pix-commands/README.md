@@ -1,10 +1,12 @@
 # pix-commands
 
-Pi extension — `/diff` and `/clear` slash commands.
+Pi extension — `/clear` slash command.
 
 ## What it does
 
-Registers two slash commands. `/diff` asks the agent to inspect `git status` and `git diff`, then respond with a one-sentence TL;DR, a per-file breakdown of what changed and why (with +/− line counts), and a brief impact note on behaviour or tests. If an agent turn is already in progress, the prompt is queued as a follow-up. `/clear` deletes `~/.cache/pi` — useful for flushing stale model-data or BenchLM cache — and prompts you to run `/reload` to apply the change. No extra dependencies beyond Pi.
+Registers the `/clear` slash command. `/clear` deletes `~/.cache/pi` — useful for flushing stale model-data or BenchLM cache — and prompts you to run `/reload` to apply the change. No extra dependencies beyond Pi.
+
+> Diff review moved to the `diff` skill in [`@xynogen/pix-skills`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-skills), which pre-populates `git status` + staged/unstaged diffs via the `` !`cmd` `` directive.
 
 ## Install
 
