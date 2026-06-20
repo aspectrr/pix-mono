@@ -12,6 +12,12 @@ Intercepts every `bash` tool call and classifies the command against a set of se
 pi install npm:@xynogen/pix-gate
 ```
 
+> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+>
+> ```bash
+> pi install npm:@xynogen/pix-core
+> ```
+
 ## Reusable exports
 
 The gate is split into a pure rule engine and the interactive prompt, so the

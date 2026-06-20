@@ -12,6 +12,12 @@ Replaces Pi's default `grep` tool with an enhanced version backed by `pix-pretty
 pi install npm:@xynogen/pix-grep
 ```
 
+> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+>
+> ```bash
+> pi install npm:@xynogen/pix-core
+> ```
+
 ## Full distro
 
 Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)

@@ -106,6 +106,12 @@ dependency (unlike RTK and TOON).
 pi install npm:@xynogen/pix-optimizer
 ```
 
+> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+>
+> ```bash
+> pi install npm:@xynogen/pix-core
+> ```
+
 ## Architecture
 
 | File              | Role                                                      |
