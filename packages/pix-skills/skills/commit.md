@@ -15,7 +15,22 @@ Still forbidden: secrets, binaries, unrelated changes, trailer metadata.
 
 ### Phase 1: Inspect
 
-- **AUTO-RUN**: Run `git status` and `git diff` (staged + unstaged), then proceed straight to commit. Do NOT pause for "may I commit?" confirmation — user already asked.
+The blocks below are pre-populated with live repository state at skill-load
+time via `\!`cmd`` directives — read them before composing the commit.
+
+#### Branch + short status
+
+!`git status -sb`
+
+#### Staged changes (index vs HEAD)
+
+!`git diff --cached`
+
+#### Unstaged changes (working tree vs index)
+
+!`git diff`
+
+- **AUTO-RUN**: The status + diff above are already loaded — review them, then proceed straight to commit. Re-run `git status` / `git diff` only after staging or `.gitignore` edits. Do NOT pause for "may I commit?" confirmation — user already asked.
 - **GITIGNORE**: Before staging, inspect untracked/generated files. Add obvious ignore candidates to `.gitignore` (build dirs, caches, logs, temp files, editor/OS junk, local env files). Re-run `git status`. Uncertain whether file should be ignored vs committed → ask user before changing `.gitignore` or staging it.
 - **GROUP**: Cluster changes by path/module and by functionality. Each cluster → one self-contained commit.
 - **GUARD**: Scan diff for secrets, binaries, debug logs, unrelated edits. Halt and report if found.
