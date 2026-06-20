@@ -71,6 +71,7 @@ Not bundled by `pix-core` — install each only if you want it. These are delibe
 | [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools — needs a 9Router API key, so only useful if you route through 9Router |
 | [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
 | [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
+| [`@xynogen/pix-subagent`](packages/pix-subagent) | Sub-agent spawning — 3 tools (`agent`, `agent_result`, `agent_steer`), live model widget, work-splitting; ported from [tintinweb/pi-subagents](https://github.com/tintinweb/pi-subagents) (MIT) |
 
 ### Roadmap — third-party extensions
 
@@ -80,7 +81,6 @@ Upstream Pi community extensions we currently lean on. The future-development go
 | --- | --- |
 | [`pi-lens`](https://github.com/apmantza/pi-lens) | Real-time code feedback — LSP navigation/diagnostics, linters, formatters, type-checking, structural (ast-grep) analysis |
 | [`pi-mcp-adapter`](https://github.com/nicobailon/pi-mcp-adapter) | MCP (Model Context Protocol) adapter — connect Pi to external MCP servers and call their tools |
-| [`pi-subagents`](https://github.com/nicobailon/pi-subagents) | Delegate tasks to subagents — single/chain/parallel/async runs with TUI clarification |
 
 ## Install
 
@@ -148,6 +148,8 @@ Several packages here originated as forks or merges of community Pi packages:
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
 | `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-core` |
+| [`git:github.com/tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) | spawn engine ported into `pix-subagent` |
+| [`git:github.com/nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents) | work-splitting design adapted in `pix-subagent` |
 
 Previous standalone repos migrated into this monorepo: `pix-optimizer`, `pix-themes`, `pix-pretty`, `pix-core`, `pix-9router`, `pix-data`.
 
