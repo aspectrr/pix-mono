@@ -107,18 +107,13 @@ describe("summariseTools", () => {
 		expect(r.detail).toBe("2 loaded");
 	});
 
-	it("breaks out extension tools in the detail", () => {
+	it("counts total without source breakdown", () => {
 		const r = summariseTools([
 			{ sourceInfo: { source: "builtin" } },
 			{ sourceInfo: { source: "my-extension" } },
 			{ sourceInfo: { source: "sdk" } },
 		]);
-		expect(r.detail).toBe("3 loaded (+2 ext)");
-	});
-
-	it("treats missing sourceInfo as non-builtin", () => {
-		const r = summariseTools([{}, { sourceInfo: {} }]);
-		expect(r.detail).toBe("2 loaded (+2 ext)");
+		expect(r.detail).toBe("3 loaded");
 	});
 });
 

@@ -296,13 +296,7 @@ export function summariseTools(tools: ToolInfo[]): CheckResult {
 	if (total === 0) {
 		return { label: "Tools", status: "warn", detail: "none active" };
 	}
-	const builtin = tools.filter(
-		(t) => t.sourceInfo?.source === "builtin",
-	).length;
-	const extra = total - builtin;
-	const detail =
-		extra > 0 ? `${total} loaded (+${extra} ext)` : `${total} loaded`;
-	return { label: "Tools", status: "ok", detail };
+	return { label: "Tools", status: "ok", detail: `${total} loaded` };
 }
 
 function checkTools(pi: { getActiveTools?: () => ToolInfo[] }): CheckResult {
