@@ -1,5 +1,5 @@
 ---
-name: toon-json
+name: toon
 description: Manipulate information-dense JSON efficiently with jq + TOON. Use when fetching/reading large or repetitive JSON (LLM schemas, OpenAPI specs, API responses, datasets, config dumps) into context. Query/reshape with jq, compress to TOON to cut tokens, decode back to JSON only when a strict contract needs it.
 ---
 

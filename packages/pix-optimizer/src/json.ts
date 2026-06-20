@@ -1,12 +1,12 @@
 /**
  * json.ts — JSON token-optimization via jq + TOON.
  *
- * Two parts, mirroring rtk.ts/caveman.ts:
- *   1. A small system-prompt nudge teaching the model to run JSON through
- *      `jq` (query/reshape) and `toon` (compress for context), and to convert
- *      back to JSON only when a strict contract requires it.
- *   2. A bundled `toon-json` skill, surfaced via `resources_discover`, that
- *      holds the full workflow + when-NOT-to-use guidance.
+ * A small system-prompt nudge teaching the model to run JSON through
+ * `jq` (query/reshape) and `toon` (compress for context), and to convert
+ * back to JSON only when a strict contract requires it.
+ *
+ * The bundled `toon-json` skill lives in pix-skills and is auto-discovered
+ * from there — no resources_discover hook needed here.
  *
  * TOON = Token-Oriented Object Notation (https://github.com/toon-format/spec).
  * It shines on uniform/tabular arrays of objects (declare keys once, stream
@@ -17,8 +17,6 @@
  * by index.ts alongside caveman(pi) and rtk(pi).
  */
 
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
@@ -207,15 +205,6 @@ export function objectDepth(value: unknown): number {
 
 // ── Bundled skill path ────────────────────────────────────────────────────────
 
-/**
- * Absolute path to the bundled `toon-json` skill directory, resolved relative
- * to this module so it works regardless of the extension's install location.
- */
-export function skillDir(): string {
-	const here = fileURLToPath(new URL(".", import.meta.url));
-	return join(here, "skills", "toon-json");
-}
-
 // ── Pi extension ──────────────────────────────────────────────────────────────
 
 export function json(
@@ -243,12 +232,6 @@ export function json(
 	});
 	pi.on("agent_end", async (_event, ctx) => {
 		syncStatus(ctx);
-	});
-
-	// Surface the bundled skill so the model can load the full workflow.
-	pi.on("resources_discover", async () => {
-		if (!enabled) return undefined;
-		return { skillPaths: [skillDir()] };
 	});
 
 	// Inject the JSON-handling nudge into the system prompt, but ONLY when the

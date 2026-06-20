@@ -6,7 +6,7 @@ shared status-bar cell:
 
 - **Caveman** (`⛏`) — terse-output system prompt
 - **RTK** (`⚔`) — prefixes shell commands with `rtk` + injects RTK prompt
-- **TOON** (`✂`) — jq + TOON guidance for dense JSON (+ bundled skill)
+- **TOON** (`✂`) — jq + TOON guidance for dense JSON (skill lives in pix-skills)
 
 ## Command
 
@@ -63,11 +63,14 @@ cargo install rtk-ai
 
 ### TOON / JSON Compression (`✂`)
 
-Guidance + a bundled `toon-json` skill for handling information-dense JSON via
-`jq` (query/reshape) and `toon` (compress). The system-prompt nudge is injected
-**only when the user prompt mentions JSON** (`json`/`jsonl`/`jq`/`toon`/
-`openapi`/…). TOON shines on uniform/tabular arrays; deeply nested or
-array-of-arrays data and API contracts stay as JSON.
+Guidance for handling information-dense JSON via `jq` (query/reshape) and
+`toon` (compress). The system-prompt nudge is injected **only when the user
+prompt mentions JSON** (`json`/`jsonl`/`jq`/`toon`/`openapi`/…). TOON shines
+on uniform/tabular arrays; deeply nested or array-of-arrays data and API
+contracts stay as JSON.
+
+The `toon-json` skill (full workflow + when-NOT-to-use guidance) is bundled in
+`pix-skills` and auto-discovered from there.
 
 **Requirement:** `jq` and `toon` on `PATH`.
 
@@ -90,7 +93,7 @@ pi install npm:@xynogen/pix-optimizer
 | `src/status.ts`   | Shared status-bar cell + `OptimizerHandle` contract       |
 | `src/caveman.ts`  | Caveman logic, levels, prompt, settings dialog            |
 | `src/rtk.ts`      | RTK prompt + bash command rewriting                       |
-| `src/json.ts`     | jq+TOON guidance, heuristics, bundled skill registration  |
+| `src/json.ts`     | jq+TOON guidance, heuristics, system-prompt injection     |
 
 Each tool registers its own lifecycle hooks and exposes an `OptimizerHandle`
 that `/opt` dispatches to. All three share one `OptimizerStatus`.

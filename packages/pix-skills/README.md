@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 24 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 26 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
@@ -50,8 +50,10 @@ All skills are model-invocable — pi auto-loads each one on description match. 
 | `task` | Task orchestration and ambiguity resolution |
 | `test` | Test execution, analysis, and failure resolution via TDD |
 | `tldr` | Maximum-density technical summary, zero filler |
+| `toon` | Handle information-dense JSON with jq + TOON compression |
 | `ui` | UI/UX design and implementation guidance for frontends |
 | `verify` | Verification before completion — confirm it's actually fixed |
+| `subagent` | Plan, decompose, and fan out independent units to cheaper parallel subagent workers |
 
 ## Usage
 

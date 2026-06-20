@@ -5,7 +5,6 @@ import {
 	JSON_SYSTEM_PROMPT,
 	mentionsJson,
 	objectDepth,
-	skillDir,
 } from "./json.ts";
 
 describe("JSON_SYSTEM_PROMPT", () => {
@@ -166,12 +165,5 @@ describe("adviseToon", () => {
 		const d2 = { a: { b: 1 } }; // depth 2
 		expect(adviseToon(d2, 1).useToon).toBe(false);
 		expect(adviseToon(d2, 2).useToon).toBe(true);
-	});
-});
-
-describe("skillDir", () => {
-	it("points at the bundled toon-json skill", () => {
-		const dir = skillDir();
-		expect(dir.endsWith("skills/toon-json")).toBe(true);
 	});
 });
