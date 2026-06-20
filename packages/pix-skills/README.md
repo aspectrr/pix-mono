@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 26 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 28 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
@@ -33,8 +33,10 @@ All skills are model-invocable — pi auto-loads each one on description match. 
 | `bootstrap` | Project and tool scaffolding from authoritative docs |
 | `brainstorm` | Design exploration and spec refinement before implementation |
 | `clone` | Clone any git repo into `/tmp/clones` for read-only exploration |
+| `command-runner` | Inspect workspace health using pre-populated git context (status + diff) |
 | `commit` | Split, write, and maintain Conventional-Commit-style commits |
 | `debug` | Root-cause analysis and self-annealing error resolution |
+| `diff` | Review current git changes via pre-populated status + staged/unstaged diffs |
 | `explain` | Technical deconstruction and logic tracing of existing code |
 | `finish` | Structured branch completion — verify, decide, clean up |
 | `graphify` | Codebase questions via a persistent knowledge graph |
@@ -54,6 +56,41 @@ All skills are model-invocable — pi auto-loads each one on description match. 
 | `ui` | UI/UX design and implementation guidance for frontends |
 | `verify` | Verification before completion — confirm it's actually fixed |
 | `subagent` | Plan, decompose, and fan out independent units to cheaper parallel subagent workers |
+
+## Command interpolation
+
+Skill `.md` files may embed live command output with the `` !`cmd` `` directive.
+When the agent loads a skill with `read_skills(name=<skill>, full=true)`, each
+directive is evaluated and replaced inline with a fenced block holding the
+command's output — so the skill arrives pre-populated with live workspace
+context (e.g. `git status`).
+
+```markdown
+### Working tree status
+!`git status -s`
+```
+
+### Security — pix-gate is the policy (no prompt)
+
+Directive commands are gated by the **same rule engine** as the `bash` tool
+(`@xynogen/pix-gate`), but with **no confirmation dialog**:
+
+- **Auto-deny on any rule match.** If a command matches any pix-gate rule
+  (critical / dangerous / risky), it is **not run** — the directive is replaced
+  with an inline `[blocked: <severity> — <reason>]` marker so the skill author
+  can see and fix it.
+- **Shell-free execution.** Commands run via a direct `argv` spawn (never
+  `bash -c`). Any shell metacharacter (`; | & $ \` > < ( ) { }`, newline) is
+  rejected, so a clean-looking prefix can't smuggle a chained command.
+- **Bounded.** Per-command 10s timeout and 16 KB output cap; failures never
+  throw — they inline a marker so skill loading always completes.
+- **Escape.** `` \!`cmd` `` is left literal, so docs can show the syntax without
+  running it.
+- **Single source of truth.** Expanding pix-gate's rule table or a user's
+  `~/.pi/agent/pix-gate.json` automatically tightens the skill path too.
+
+Interpolation only happens on the `full=true` path; listing and description
+lookups never run commands.
 
 ## Usage
 

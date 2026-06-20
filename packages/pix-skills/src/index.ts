@@ -16,7 +16,26 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import {
+	directiveBlockReason,
+	findCommandDirectives,
+	replaceSpan,
+	tokenizeCommand,
+} from "./directive.ts";
 import { once } from "./once.ts";
+import { runArgv } from "./run.ts";
+
+// Re-export the pure directive API so consumers can import from the package root.
+export {
+	type CommandDirective,
+	directiveBlockReason,
+	findCommandDirectives,
+	hasShellMeta,
+	replaceSpan,
+	scanUnsafeDirectives,
+	tokenizeCommand,
+	type UnsafeDirective,
+} from "./directive.ts";
 
 // ─── Skill resolution ─────────────────────────────────────────────────────────
 
@@ -96,6 +115,52 @@ export function extractName(content: string): string | null {
 	return nm ? nm[1]!.trim() : null;
 }
 
+// ─── Command directive interpolation ───────────────────────────────────────────
+
+export type ArgvRunner = (argv: string[], cwd: string) => Promise<string>;
+const defaultRunner: ArgvRunner = (argv, cwd) => runArgv(argv, { cwd });
+
+function fence(output: string): string {
+	return `\n\`\`\`\n${output}\n\`\`\`\n`;
+}
+
+/**
+ * Expand !`cmd` directives in skill content. Policy (no prompt):
+ *   - shell metachars → blocked
+ *   - matches any pix-gate rule (critical/dangerous/risky) → blocked
+ *   - otherwise → run shell-free, inline output as a fenced block
+ * Blocked directives are replaced with an inline [blocked: reason] marker so
+ * the skill author can see and fix them. Splices right-to-left so earlier spans
+ * stay valid as the string mutates.
+ */
+export async function interpolateSkill(
+	content: string,
+	cwd: string,
+	run: ArgvRunner = defaultRunner,
+): Promise<string> {
+	const directives = findCommandDirectives(content);
+	if (!directives.length) return content;
+
+	const resolved = await Promise.all(
+		directives.map(async (d) => {
+			const reason = directiveBlockReason(d.command);
+			if (reason) return { d, text: `[blocked: ${reason}]`, blocked: true };
+			return {
+				d,
+				text: await run(tokenizeCommand(d.command), cwd),
+				blocked: false,
+			};
+		}),
+	);
+
+	let out = content;
+	for (let i = resolved.length - 1; i >= 0; i--) {
+		const { d, text, blocked } = resolved[i]!;
+		out = replaceSpan(out, d.start, d.end, blocked ? text : fence(text));
+	}
+	return out;
+}
+
 export type ThemeLike = {
 	bold: (text: string) => string;
 	fg: (key: "accent" | "muted" | "toolTitle", text: string) => string;
@@ -158,7 +223,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		executionMode: "sequential",
 		parameters: ParamsSchema,
 
-		async execute(_toolCallId, params, _signal) {
+		async execute(_toolCallId, params, _signal, _upd, toolCtx) {
 			const ok = (text: string) => ({
 				content: [{ type: "text" as const, text }],
 				details: undefined,
@@ -215,8 +280,11 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 					);
 				}
 
-				// full=true → entire file
-				return ok(content);
+				// full=true → interpolate !`cmd` directives (pix-gate-gated, no
+				// prompt; auto-deny on any rule match), then return.
+				const cwd = (toolCtx as { cwd?: string })?.cwd ?? process.cwd();
+				const expanded = await interpolateSkill(content, cwd);
+				return ok(expanded);
 			} catch (err) {
 				return fail(
 					`Failed to read skill "${name}": ${
