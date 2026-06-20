@@ -6,7 +6,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@xynogen/pix-data": ["packages/pix-data/src/index.ts"],
-			"@xynogen/pix-skills": ["packages/pix-skills/src/index.ts"]
+			"@xynogen/pix-skills": ["packages/pix-skills/src/index.ts"],
+			"@xynogen/pix-gate/lib": ["packages/pix-gate/src/lib.ts"]
 		},
 		"lib": ["ES2022"],
 		"strict": true,
