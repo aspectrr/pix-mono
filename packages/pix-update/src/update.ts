@@ -87,7 +87,7 @@ export function formatUpdateSummary(
 		: summary;
 }
 
-async function resolveCommand(command: string, pi: ExtensionAPI) {
+export async function resolveCommand(command: string, pi: ExtensionAPI) {
 	const result = await pi.exec(
 		"/bin/sh",
 		["-lc", `command -v ${command} || true`],
@@ -96,13 +96,23 @@ async function resolveCommand(command: string, pi: ExtensionAPI) {
 	return result.stdout.trim().split("\n")[0] || undefined;
 }
 
-async function currentVersion(pi: ExtensionAPI) {
+export async function currentVersion(pi: ExtensionAPI) {
 	const result = await pi.exec("pi", ["--version"], { timeout: 10_000 });
 	return result.stdout.trim() || result.stderr.trim() || "unknown";
 }
 
-async function detectInstallMethod(pi: ExtensionAPI): Promise<InstallMethod> {
-	const piPath = await resolveCommand("pi", pi);
+export async function detectInstallMethod(
+	pi: ExtensionAPI,
+): Promise<InstallMethod> {
+	// Resolve pi path + realpath + all fallback command probes in parallel.
+	const [piPath, vpPath, bunPath, npmPath, brewPath] = await Promise.all([
+		resolveCommand("pi", pi),
+		resolveCommand("vp", pi),
+		resolveCommand("bun", pi),
+		resolveCommand("npm", pi),
+		resolveCommand("brew", pi),
+	]);
+
 	const realPiPath = piPath
 		? (
 				await pi.exec(
@@ -137,14 +147,15 @@ async function detectInstallMethod(pi: ExtensionAPI): Promise<InstallMethod> {
 		if ((hasGlobalNpm.code ?? 1) === 0) return "npm";
 	}
 
-	if (await resolveCommand("vp", pi)) return "vp";
-	if (await resolveCommand("bun", pi)) return "bun";
-	if (await resolveCommand("npm", pi)) return "npm";
-	if (await resolveCommand("brew", pi)) return "brew";
+	// Fall back to whichever package manager was found.
+	if (vpPath) return "vp";
+	if (bunPath) return "bun";
+	if (npmPath) return "npm";
+	if (brewPath) return "brew";
 	return "native";
 }
 
-async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
+export async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
 	let lastOutput = "";
 	for (let attempt = 1; attempt <= 3; attempt++) {
 		const result = await pi.exec(spec.command, spec.args, { timeout: 180_000 });
@@ -166,8 +177,11 @@ async function updatePi(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 		ctx as ExtensionCommandContext & { waitForIdle?: () => Promise<void> }
 	).waitForIdle?.();
 
-	const before = await currentVersion(pi).catch(() => "unknown");
-	const method = await detectInstallMethod(pi);
+	// Grab current version + detect install method concurrently.
+	const [before, method] = await Promise.all([
+		currentVersion(pi).catch(() => "unknown"),
+		detectInstallMethod(pi),
+	]);
 	const spec = commandFor(method);
 
 	if (!spec) {
@@ -241,9 +255,11 @@ async function updatePackages(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 }
 
 async function updateAll(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
+	// updatePi must finish first (method detection + install), then the two
+	// extension refresh steps can run concurrently — they touch different
+	// registries (npm curl vs pi update --extensions) with no ordering dependency.
 	await updatePi(pi, ctx);
-	await updateExtensions(pi, ctx);
-	await updatePackages(pi, ctx);
+	await Promise.all([updateExtensions(pi, ctx), updatePackages(pi, ctx)]);
 }
 
 export default function (pi: ExtensionAPI) {
