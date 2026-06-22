@@ -16,7 +16,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (models.dev + BenchLM), cached at `~/.cache/pi` |
+| [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (modelgrep catalog + coding score), cached at `~/.cache/pi` |
 | [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
 
 **Theme**
@@ -31,7 +31,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | --- | --- |
 | [`@xynogen/pix-welcome`](packages/pix-welcome) | ASCII π banner + startup health checks (version, auth, gitignore) |
 | [`@xynogen/pix-footer`](packages/pix-footer) | Status bar — mode, git branch, model, tokens, cost, live TPS |
-| [`@xynogen/pix-models`](packages/pix-models) | `/models` — enhanced model picker with BenchLM rank, context window, cost |
+| [`@xynogen/pix-models`](packages/pix-models) | `/models` — enhanced model picker with coding score/rank, context window, cost |
 | [`@xynogen/pix-update`](packages/pix-update) | `/update` — self-update Pi + all extensions, detects install method |
 | [`@xynogen/pix-commands`](packages/pix-commands) | `/diff` and `/clear` slash commands |
 | [`@xynogen/pix-nudge`](packages/pix-nudge) | Tools nudge + capability nudge hooks to steer model toward correct tools |

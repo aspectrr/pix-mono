@@ -1,11 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
 	buildModelsDevIndex,
 	lookupInIndex,
-	type ModelsDevApi,
-	type ModelsDevModel,
+	type ModelGrepModel,
 	routerBaseUrl,
 } from "./data.ts";
+
+// modelgrep-shaped fixture builder (buildModelsDevIndex now takes ModelGrepModel[]).
+function mg(
+	id: string,
+	opts: { name?: string; reasoning?: boolean; input?: string[] } = {},
+): ModelGrepModel {
+	return {
+		id,
+		name: opts.name ?? id,
+		capabilities: { reasoning: opts.reasoning },
+		modality: { input: opts.input },
+	};
+}
 
 // ── routerBaseUrl ────────────────────────────────────────────────────────────
 
@@ -36,75 +48,35 @@ describe("routerBaseUrl", () => {
 // ── buildModelsDevIndex ──────────────────────────────────────────────────────
 
 describe("buildModelsDevIndex", () => {
-	const api: ModelsDevApi = {
-		anthropic: {
-			models: {
-				"claude-sonnet-4-5": {
-					id: "claude-sonnet-4-5",
-					name: "Claude Sonnet 4.5",
-					reasoning: false,
-					limit: { context: 200_000, output: 8_192 },
-					cost: { input: 3, output: 15 },
-				},
-				"claude-opus-4": {
-					id: "claude-opus-4",
-					name: "Claude Opus 4",
-					reasoning: true,
-					limit: { context: 200_000, output: 32_000 },
-					cost: { input: 15, output: 75 },
-				},
-			},
-		},
-		openai: {
-			models: {
-				"gpt-4o": {
-					id: "gpt-4o",
-					name: "GPT-4o",
-					modalities: { input: ["text", "image"], output: ["text"] },
-				},
-			},
-		},
-	};
+	const catalog: ModelGrepModel[] = [
+		mg("anthropic/claude-sonnet-4-5", { name: "Claude Sonnet 4.5" }),
+		mg("anthropic/claude-opus-4", { name: "Claude Opus 4", reasoning: true }),
+		mg("openai/gpt-4o", { name: "GPT-4o", input: ["text", "image"] }),
+	];
 
-	it("indexes all models by exact id", () => {
-		const idx = buildModelsDevIndex(api);
+	it("indexes all models by slug", () => {
+		const idx = buildModelsDevIndex(catalog);
 		expect(idx.has("claude-sonnet-4-5")).toBe(true);
 		expect(idx.has("claude-opus-4")).toBe(true);
 		expect(idx.has("gpt-4o")).toBe(true);
 	});
 
-	it("indexes normalized ids (strip date suffix)", () => {
-		const apiWithDate: ModelsDevApi = {
-			anthropic: {
-				models: {
-					"claude-sonnet-4-5-20250514": {
-						id: "claude-sonnet-4-5-20250514",
-						name: "Claude Sonnet 4.5",
-					},
-				},
-			},
-		};
-		const idx = buildModelsDevIndex(apiWithDate);
-		// normalized: strip -20250514
+	it("indexes normalized slug (strip date suffix)", () => {
+		const idx = buildModelsDevIndex([
+			mg("anthropic/claude-sonnet-4-5-20250514", { name: "Claude Sonnet 4.5" }),
+		]);
 		expect(idx.has("claude-sonnet-4-5")).toBe(true);
 	});
 
-	it("handles empty api gracefully", () => {
-		const idx = buildModelsDevIndex({});
-		expect(idx.size).toBe(0);
+	it("handles empty catalog gracefully", () => {
+		expect(buildModelsDevIndex([]).size).toBe(0);
 	});
 
-	it("handles provider with no models key", () => {
-		const idx = buildModelsDevIndex({ anthropic: {} });
-		expect(idx.size).toBe(0);
-	});
-
-	it("preserves first-seen on id collision", () => {
-		const collide: ModelsDevApi = {
-			a: { models: { "gpt-4o": { id: "gpt-4o", name: "First" } } },
-			b: { models: { "gpt-4o": { id: "gpt-4o", name: "Second" } } },
-		};
-		const idx = buildModelsDevIndex(collide);
+	it("preserves first-seen on slug collision", () => {
+		const idx = buildModelsDevIndex([
+			mg("a/gpt-4o", { name: "First" }),
+			mg("b/gpt-4o", { name: "Second" }),
+		]);
 		expect(idx.get("gpt-4o")?.name).toBe("First");
 	});
 });
@@ -112,28 +84,12 @@ describe("buildModelsDevIndex", () => {
 // ── lookupInIndex ────────────────────────────────────────────────────────────
 
 describe("lookupInIndex", () => {
-	let index: Map<string, ModelsDevModel>;
-
-	beforeEach(() => {
-		const api: ModelsDevApi = {
-			anthropic: {
-				models: {
-					"claude-sonnet-4-5": {
-						id: "claude-sonnet-4-5",
-						name: "Claude Sonnet 4.5",
-					},
-					"claude-opus-4": { id: "claude-opus-4", name: "Claude Opus 4" },
-				},
-			},
-			openai: {
-				models: {
-					"gpt-4o": { id: "gpt-4o", name: "GPT-4o" },
-					"o3-mini": { id: "o3-mini", name: "o3 mini" },
-				},
-			},
-		};
-		index = buildModelsDevIndex(api);
-	});
+	const index = buildModelsDevIndex([
+		mg("anthropic/claude-sonnet-4-5", { name: "Claude Sonnet 4.5" }),
+		mg("anthropic/claude-opus-4", { name: "Claude Opus 4" }),
+		mg("openai/gpt-4o", { name: "GPT-4o" }),
+		mg("openai/o3-mini", { name: "o3 mini" }),
+	]);
 
 	it("finds exact match", () => {
 		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe(

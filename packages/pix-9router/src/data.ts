@@ -18,7 +18,11 @@
 import { join } from "node:path";
 import { CACHE_DIR, DataSource } from "../../pix-data/src/index.ts";
 
-export type { ModelsDevApi, ModelsDevModel } from "../../pix-data/src/index.ts";
+export type {
+	ModelGrepModel,
+	ModelsDevApi,
+	ModelsDevModel,
+} from "../../pix-data/src/index.ts";
 // Re-export the shared models.dev API so existing consumers (provider.ts)
 // can keep importing these names from "./data".
 export {

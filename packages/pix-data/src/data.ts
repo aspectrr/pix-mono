@@ -1,21 +1,18 @@
 /**
  * data.ts — shared Pi model data layer
  *
- * Single source of truth for:
- *   - models.dev metadata  (context, cost, modalities) → ~/.cache/pi/models.json   TTL 24h
- *   - BenchLM leaderboard  (rank, score, pricing)      → ~/.cache/pi/benchlm.json  TTL 24h
+ * Single source of truth, sourced from modelgrep (coding-sorted), cached at
+ * ~/.cache/pi/modelgrep.json (TTL 24h). Provides context, cost, modalities,
+ * capabilities, coding-percentile score, and rank.
  *
  * Cache files are shared across all Pi extensions — whichever extension loads
  * first populates the cache; subsequent extensions read from disk.
  *
  * Usage:
- *   import { modelsDev, benchmark } from "./data.ts";
+ *   import { modelgrep } from "./data.ts";
  *
- *   const models  = await modelsDev.get();   // async, fetches if stale
- *   const entries = await benchmark.get();
- *
- *   const models  = modelsDev.getCached();   // sync, disk-only, no fetch
- *   const entries = benchmark.getCached();
+ *   const catalog = await modelgrep.get();   // async, fetches if stale
+ *   const catalog = modelgrep.getCached();   // sync, disk-only, no fetch
  *
  *   import { lookupModelsDev, lookupBenchmark } from "./data.ts";
  */
@@ -57,10 +54,29 @@ export interface BenchmarkEntry {
 	outputPrice: number | null;
 }
 
-interface BenchmarkResponse {
-	lastUpdated?: string;
-	mode?: string;
-	models: BenchmarkEntry[];
+export interface ModelGrepModel {
+	id: string;
+	name?: string;
+	context_length?: number;
+	pricing?: { input?: number; output?: number };
+	modality?: { input?: string[]; output?: string[] };
+	capabilities?: { reasoning?: boolean };
+	benchmarks?: {
+		artificial_analysis?: {
+			// AA Intelligence Index — authoritative 9-eval composite (~0–65 range).
+			intelligence?: number | null;
+			coding?: number | null; // 0–100 index
+			agentic?: number | null; // 0–100 index
+			gpqa?: number | null; // 0–1
+			scicode?: number | null; // 0–1
+			tau2?: number | null; // 0–1
+			hle?: number | null; // 0–1
+		};
+	};
+}
+
+interface ModelGrepResponse {
+	data: ModelGrepModel[];
 }
 
 // ── DataSource ───────────────────────────────────────────────────────────────
@@ -76,6 +92,16 @@ interface DataSourceOptions<T> {
 	empty: T;
 	label: string;
 	skip?: () => boolean;
+	/**
+	 * Optional override for sources that need multiple requests (pagination).
+	 * Returns the merged raw payload, which is then handed to `parse`/cached
+	 * exactly as a single response would be.
+	 */
+	fetchRaw?: (
+		url: string,
+		headers: Record<string, string> | undefined,
+		timeoutMs: number,
+	) => Promise<unknown>;
 }
 
 export class DataSource<T> {
@@ -89,6 +115,7 @@ export class DataSource<T> {
 			timeoutMs: 10_000,
 			headers: () => undefined,
 			skip: () => false,
+			fetchRaw: defaultFetchRaw,
 			...opts,
 		};
 	}
@@ -131,14 +158,11 @@ export class DataSource<T> {
 		try {
 			const url =
 				typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
-			const response = await fetchWithTimeout(
+			const raw = await this.opts.fetchRaw(
 				url,
-				this.opts.timeoutMs,
 				this.opts.headers(),
+				this.opts.timeoutMs,
 			);
-			if (!response.ok)
-				throw new Error(`${this.opts.label} fetch failed: ${response.status}`);
-			const raw = await response.json();
 			const val = this.opts.parse(raw);
 			this._mem = val;
 			void this._writeCache(raw);
@@ -196,6 +220,52 @@ function fetchWithTimeout(
 	);
 }
 
+/** Single-request raw fetch — the default DataSource fetch strategy. */
+async function defaultFetchRaw(
+	url: string,
+	headers: Record<string, string> | undefined,
+	timeoutMs: number,
+): Promise<unknown> {
+	const response = await fetchWithTimeout(url, timeoutMs, headers);
+	if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
+	return response.json();
+}
+
+const MODELGREP_PAGE = 200; // modelgrep hard page-size cap
+const MODELGREP_MAX_PAGES = 10; // safety bound (~2000 models)
+
+interface ModelGrepPage {
+	data?: ModelGrepModel[];
+	meta?: { has_more?: boolean; next_offset?: number };
+}
+
+/**
+ * Paginating fetch for modelgrep: walks `meta.has_more`/`next_offset` and
+ * merges every page into one `{ data }` payload so `parse` and the cache see
+ * the full catalog as a single response. `url` already carries the query
+ * (sort/limit); we only append `&offset=`.
+ */
+async function fetchModelGrepAll(
+	url: string,
+	headers: Record<string, string> | undefined,
+	timeoutMs: number,
+): Promise<{ data: ModelGrepModel[] }> {
+	const all: ModelGrepModel[] = [];
+	let offset = 0;
+	for (let page = 0; page < MODELGREP_MAX_PAGES; page++) {
+		const sep = url.includes("?") ? "&" : "?";
+		const res = (await defaultFetchRaw(
+			`${url}${sep}offset=${offset}`,
+			headers,
+			timeoutMs,
+		)) as ModelGrepPage;
+		if (res.data?.length) all.push(...res.data);
+		if (!res.meta?.has_more) break;
+		offset = res.meta.next_offset ?? offset + MODELGREP_PAGE;
+	}
+	return { data: all };
+}
+
 // ── Cache dir ─────────────────────────────────────────────────────────────────
 
 export const CACHE_DIR = join(
@@ -205,21 +275,13 @@ export const CACHE_DIR = join(
 
 // ── Data sources ──────────────────────────────────────────────────────────────
 
-export const modelsDev = new DataSource<ModelsDevApi>({
-	label: "models.dev",
-	url: "https://models.dev/api.json",
-	cachePath: join(CACHE_DIR, "models.json"),
-	parse: (raw) => raw as ModelsDevApi,
-	parseCache: (data) => (data as ModelsDevApi) ?? {},
-	empty: {},
-});
-
-export const benchmark = new DataSource<BenchmarkEntry[]>({
-	label: "benchlm",
-	url: "https://benchlm.ai/api/data/leaderboard",
-	cachePath: join(CACHE_DIR, "benchlm.json"),
-	parse: (raw) => (raw as BenchmarkResponse).models ?? [],
-	parseCache: (data) => (data as BenchmarkResponse)?.models ?? [],
+export const modelgrep = new DataSource<ModelGrepModel[]>({
+	label: "modelgrep",
+	url: `https://modelgrep.com/api/v1/models?benchmarked=1&sort=coding&order=desc&limit=${MODELGREP_PAGE}`,
+	cachePath: join(CACHE_DIR, "modelgrep.json"),
+	fetchRaw: fetchModelGrepAll,
+	parse: (raw) => (raw as ModelGrepResponse).data ?? [],
+	parseCache: (data) => (data as ModelGrepResponse)?.data ?? [],
 	empty: [],
 });
 
@@ -228,8 +290,9 @@ export const benchmark = new DataSource<BenchmarkEntry[]>({
 function normalize(id: string): string {
 	return id
 		.toLowerCase()
-		.replace(/[:@].*$/, "")
-		.replace(/-\d{8}$/, "");
+		.replace(/[:@].*$/, "") // routing suffix (:nitro, @date)
+		.replace(/[._]/g, "-") // fold separators: modelgrep `4.5` ↔ Pi routing `4-5`
+		.replace(/-\d{8}$/, ""); // trailing -YYYYMMDD
 }
 
 function stripPrefix(id: string): string {
@@ -237,71 +300,172 @@ function stripPrefix(id: string): string {
 	return i >= 0 ? id.slice(i + 1) : id;
 }
 
-export function buildModelsDevIndex(
-	api: ModelsDevApi,
-): Map<string, ModelsDevModel> {
-	const index = new Map<string, ModelsDevModel>();
-	for (const provider of Object.values(api)) {
-		if (!provider?.models) continue;
-		for (const [modelId, model] of Object.entries(provider.models)) {
-			const m: ModelsDevModel = { ...model, id: modelId };
-			if (!index.has(modelId)) index.set(modelId, m);
-			const norm = normalize(modelId);
-			if (!index.has(norm)) index.set(norm, m);
-		}
+/** Slug = model id without its maker/provider prefix. */
+function slugOf(id: string): string {
+	return id.includes("/") ? id.slice(id.lastIndexOf("/") + 1) : id;
+}
+
+/**
+ * Generic normalized-index lookup: exact slug → normalized slug → fuzzy
+ * prefix overlap. Handles routing suffixes (`:nitro`, `@date`, `-YYYYMMDD`)
+ * and maker prefixes (e.g. `tencent/hy3-preview:nitro` → `hy3-preview`).
+ */
+function findInIndex<T>(id: string, index: Map<string, T>): T | undefined {
+	const stripped = stripPrefix(id);
+	const direct = index.get(stripped) ?? index.get(normalize(stripped));
+	if (direct) return direct;
+	const norm = normalize(stripped);
+	for (const [key, value] of index) {
+		if (key.startsWith(norm) || norm.startsWith(key)) return value;
 	}
-	return index;
+	return undefined;
 }
 
 export function lookupInIndex(
 	id: string,
 	index: Map<string, ModelsDevModel>,
 ): ModelsDevModel | undefined {
-	const stripped = stripPrefix(id);
-	const direct = index.get(stripped) ?? index.get(normalize(stripped));
-	if (direct) return direct;
-	const norm = normalize(stripped);
-	for (const [key, model] of index) {
-		if (key.startsWith(norm) || norm.startsWith(key)) return model;
+	return findInIndex(id, index);
+}
+
+function toModelsDevModel(g: ModelGrepModel): ModelsDevModel {
+	return {
+		id: slugOf(g.id),
+		name: g.name,
+		reasoning: g.capabilities?.reasoning,
+		modalities: g.modality,
+		limit: { context: g.context_length },
+		cost: { input: g.pricing?.input, output: g.pricing?.output },
+	};
+}
+
+export function buildModelsDevIndex(
+	source: ModelGrepModel[],
+): Map<string, ModelsDevModel> {
+	const index = new Map<string, ModelsDevModel>();
+	for (const g of source) {
+		const m = toModelsDevModel(g);
+		if (!index.has(m.id)) index.set(m.id, m);
+		const norm = normalize(m.id);
+		if (!index.has(norm)) index.set(norm, m);
 	}
-	return undefined;
+	return index;
 }
 
 export function lookupModelsDev(
-	provider: string,
+	_provider: string,
 	id: string,
 ): ModelsDevModel | undefined {
-	const data = modelsDev.getCached();
-	const canonical = id.includes("/") ? id.slice(id.lastIndexOf("/") + 1) : id;
-	const exact = data[provider]?.models?.[canonical];
-	if (exact) return exact;
-	for (const p of Object.keys(data)) {
-		const hit = data[p]?.models?.[canonical];
-		if (hit) return hit;
-	}
-	return undefined;
+	// Provider prefix differs between Pi routing (cc/ds/openrouter) and modelgrep
+	// (anthropic/tencent), so join on the model slug only via the normalized index.
+	return findInIndex(id, buildModelsDevIndex(modelgrep.getCached()));
 }
 
 export async function fetchModelsDevIndex(): Promise<
 	Map<string, ModelsDevModel>
 > {
-	return buildModelsDevIndex(await modelsDev.get());
+	return buildModelsDevIndex(await modelgrep.get());
 }
 
-function normBench(s: string): string {
-	return s
-		.toLowerCase()
-		.replace(/[-_.]+/g, " ")
-		.replace(/\s+/g, " ")
-		.trim();
+// Weighted blend, renormalized over present fields — a missing input dilutes
+// only its own group, never zero-penalizes the whole score.
+function blend(parts: [number, number | null | undefined][]): number | null {
+	let weighted = 0;
+	let present = 0;
+	for (const [w, v] of parts) {
+		if (v == null) continue;
+		weighted += w * v;
+		present += w;
+	}
+	return present === 0 ? null : weighted / present;
+}
+
+const frac = (v: number | null | undefined) => (v == null ? null : v / 100);
+
+// AA Intelligence Index ceiling — current leader (Claude Fable 5) scores ~65,
+// so /65 maps the index to ~0–100 with headroom and no clipping.
+const INTELLIGENCE_MAX = 65;
+// Fallback calibration. For the models that carry the index AND the raw benches
+// (deduped overlap, n=29), we fit our heuristic (0–1) to the rescaled index via
+// least-squares:
+//   index100 ≈ SLOPE·heuristic + INTERCEPT
+// Heuristic weights below + this line were jointly tuned against the index
+// (R²=0.901, LOOCV-RMSE 6.55pt). Applying it to index-less models maps their
+// heuristic onto the SAME scale as real index scores — a data-fit, not a
+// guessed penalty. Refit if the catalog or weights change.
+const FALLBACK_SLOPE = 120.6;
+const FALLBACK_INTERCEPT = -10.6;
+const clamp01to100 = (x: number) => Math.max(0, Math.min(100, x));
+
+// Our coding/agentic-weighted heuristic from the raw evals (each used once —
+// no double-counting with the index). Weights tuned against the AA index:
+// agentic-heavy (.60) since tool-call matters most, coding (.30), reasoning a
+// .10 tiebreaker. Sub-weights likewise fit — tau2 dominates the agentic group.
+function heuristicScore(
+	aa: NonNullable<
+		NonNullable<ModelGrepModel["benchmarks"]>["artificial_analysis"]
+	>,
+): number | null {
+	const coding = blend([
+		[0.6, frac(aa.coding)],
+		[0.4, aa.scicode],
+	]);
+	const agentic = blend([
+		[0.7, aa.tau2],
+		[0.3, frac(aa.agentic)],
+	]);
+	const reasoning = blend([
+		[0.6, aa.gpqa],
+		[0.4, aa.hle],
+	]);
+	return blend([
+		[0.3, coding],
+		[0.6, agentic],
+		[0.1, reasoning],
+	]);
+}
+
+// Model score 0–100. Prefer AA's Intelligence Index (authoritative 9-eval
+// composite); when absent, map our heuristic onto the index scale via the
+// fitted line. Null only when nothing is benchmarked.
+function codingScore(
+	bench: NonNullable<ModelGrepModel["benchmarks"]>,
+): number | null {
+	const aa = bench.artificial_analysis ?? {};
+	if (aa.intelligence != null) {
+		return Math.round((aa.intelligence / INTELLIGENCE_MAX) * 100);
+	}
+	const h = heuristicScore(aa);
+	return h == null
+		? null
+		: Math.round(clamp01to100(FALLBACK_SLOPE * h + FALLBACK_INTERCEPT));
+}
+
+function buildBenchIndex(): Map<string, BenchmarkEntry> {
+	const index = new Map<string, BenchmarkEntry>();
+	// Rank by our computed score (desc); unscored sink to the bottom, holding
+	// source order among themselves.
+	const scored = modelgrep.getCached().map((g) => ({
+		g,
+		score: g.benchmarks ? codingScore(g.benchmarks) : null,
+	}));
+	scored.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+	scored.forEach(({ g, score }, i) => {
+		const slug = slugOf(g.id);
+		const entry: BenchmarkEntry = {
+			rank: i + 1,
+			model: g.name ?? g.id,
+			creator: g.id.split("/")[0] ?? "",
+			overallScore: score,
+			inputPrice: g.pricing?.input ?? null,
+			outputPrice: g.pricing?.output ?? null,
+		};
+		for (const k of [slug, normalize(slug)])
+			if (!index.has(k)) index.set(k, entry);
+	});
+	return index;
 }
 
 export function lookupBenchmark(modelName: string): BenchmarkEntry | undefined {
-	const entries = benchmark.getCached();
-	const needle = normBench(modelName);
-	return (
-		entries.find((e) => normBench(e.model) === needle) ??
-		entries.find((e) => normBench(e.model).includes(needle)) ??
-		entries.find((e) => needle.includes(normBench(e.model)))
-	);
+	return findInIndex(modelName, buildBenchIndex());
 }

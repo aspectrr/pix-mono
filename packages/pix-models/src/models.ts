@@ -115,11 +115,14 @@ async function showEnhancedPicker(
 		m: (typeof available)[number];
 		dev: ReturnType<typeof lookupModelsDev>;
 		bench: ReturnType<typeof lookupBenchmark>;
+		// Rank among the user's *available* models, not the global catalog.
+		localRank: number | null;
 	};
 	const rows: Row[] = available.map((m) => ({
 		m,
 		dev: lookupModelsDev(m.provider, m.id),
-		bench: lookupBenchmark(m.name ?? m.id),
+		bench: lookupBenchmark(m.id),
+		localRank: null,
 	}));
 
 	// Sort: by score desc (highest first), unscored last alphabetical
@@ -129,6 +132,10 @@ async function showEnhancedPicker(
 		if (sa !== sb) return sb - sa;
 		return (a.m.name ?? a.m.id).localeCompare(b.m.name ?? b.m.id);
 	});
+
+	// Local rank = position among scored available models (best pickable = #1).
+	let localRank = 0;
+	for (const r of rows) if (r.bench) r.localRank = ++localRank;
 
 	// Show all models (no deduplication)
 	const dedupedRows = rows;
@@ -142,7 +149,9 @@ async function showEnhancedPicker(
 
 			// Find max rank width across all benchmarked rows for # padding
 			const maxRankWidth = Math.max(
-				...dedupedRows.map((r) => (r.bench ? String(r.bench.rank).length : 0)),
+				...dedupedRows.map((r) =>
+					r.localRank ? String(r.localRank).length : 0,
+				),
 				1,
 			);
 
@@ -152,64 +161,66 @@ async function showEnhancedPicker(
 
 			// Track rank per item value so fuzzy results can prioritize ranked models.
 			const rankByValue = new Map<string, number>();
-			for (const { m, bench } of dedupedRows) {
-				if (bench) rankByValue.set(`${m.provider}/${m.id}`, bench.rank);
+			for (const { m, localRank } of dedupedRows) {
+				if (localRank) rankByValue.set(`${m.provider}/${m.id}`, localRank);
 			}
 
-			const items: SelectItem[] = dedupedRows.map(({ m, dev, bench }) => {
-				const isCurrent =
-					current && m.provider === current.provider && m.id === current.id;
+			const items: SelectItem[] = dedupedRows.map(
+				({ m, dev, bench, localRank }) => {
+					const isCurrent =
+						current && m.provider === current.provider && m.id === current.id;
 
-				// Label: marker + muted '#' + bright rank + accent-colored model name
-				const marker = isCurrent ? theme.fg(accent, "▶") : " ";
-				let rankPrefix: string;
-				if (bench) {
-					const rankStr = String(bench.rank).padEnd(maxRankWidth);
-					rankPrefix = mute("#") + theme.fg("warning", rankStr);
-				} else {
-					rankPrefix = " ".repeat(maxRankWidth + 1);
-				}
-				// Display model id only; m.provider is routing provider, not part of id.
-				const idColored = theme.fg(accent, m.id);
-				const label = `${marker} ${rankPrefix} ${idColored}`;
-
-				// Description: ctx · cost · score stars
-				// Colors: ctx muted · cost success (free muted) · score+stars warning
-				const ctxRaw = fmtCtx(dev?.limit?.context ?? 0);
-				const ctxStr = mute(ctxRaw.padStart(4));
-				const rawCost = fmtCost(dev);
-				let costSeg: string;
-				if (rawCost === "—") {
-					costSeg = theme.fg("dim", "—".padEnd(10));
-				} else if (rawCost === "free") {
-					costSeg = mute("free".padEnd(10));
-				} else {
-					costSeg = theme.fg("success", rawCost.padEnd(10));
-				}
-				let benchSeg = "";
-				if (bench) {
-					const score = bench.overallScore ?? "?";
-					const s = bench.overallScore;
-					let filled = 1;
-					if (typeof s === "number") {
-						if (s >= 90) filled = 5;
-						else if (s >= 80) filled = 4;
-						else if (s >= 70) filled = 3;
-						else if (s >= 50) filled = 2;
+					// Label: marker + muted '#' + bright rank + accent-colored model name
+					const marker = isCurrent ? theme.fg(accent, "▶") : " ";
+					let rankPrefix: string;
+					if (localRank) {
+						const rankStr = String(localRank).padEnd(maxRankWidth);
+						rankPrefix = mute("#") + theme.fg("warning", rankStr);
+					} else {
+						rankPrefix = " ".repeat(maxRankWidth + 1);
 					}
-					const starBar =
-						theme.fg("warning", "★".repeat(filled)) +
-						mute("☆".repeat(5 - filled));
-					benchSeg = `⚡${theme.fg("warning", String(score))} ${starBar}`;
-				}
-				const desc = [ctxStr, costSeg, benchSeg].filter(Boolean).join(sep);
+					// Display model id only; m.provider is routing provider, not part of id.
+					const idColored = theme.fg(accent, m.id);
+					const label = `${marker} ${rankPrefix} ${idColored}`;
 
-				return {
-					value: `${m.provider}/${m.id}`,
-					label,
-					description: desc,
-				};
-			});
+					// Description: ctx · cost · score stars
+					// Colors: ctx muted · cost success (free muted) · score+stars warning
+					const ctxRaw = fmtCtx(dev?.limit?.context ?? 0);
+					const ctxStr = mute(ctxRaw.padStart(4));
+					const rawCost = fmtCost(dev);
+					let costSeg: string;
+					if (rawCost === "—") {
+						costSeg = theme.fg("dim", "—".padEnd(10));
+					} else if (rawCost === "free") {
+						costSeg = mute("free".padEnd(10));
+					} else {
+						costSeg = theme.fg("success", rawCost.padEnd(10));
+					}
+					let benchSeg = "";
+					if (bench) {
+						const score = bench.overallScore ?? "?";
+						const s = bench.overallScore;
+						let filled = 1;
+						if (typeof s === "number") {
+							if (s >= 90) filled = 5;
+							else if (s >= 80) filled = 4;
+							else if (s >= 70) filled = 3;
+							else if (s >= 50) filled = 2;
+						}
+						const starBar =
+							theme.fg("warning", "★".repeat(filled)) +
+							mute("☆".repeat(5 - filled));
+						benchSeg = `⚡${theme.fg("warning", String(score))} ${starBar}`;
+					}
+					const desc = [ctxStr, costSeg, benchSeg].filter(Boolean).join(sep);
+
+					return {
+						value: `${m.provider}/${m.id}`,
+						label,
+						description: desc,
+					};
+				},
+			);
 
 			const currentIdx = current
 				? items.findIndex(
@@ -225,7 +236,7 @@ async function showEnhancedPicker(
 				new Text(
 					theme.fg(
 						"dim",
-						"context & pricing from models.dev · ranks from benchlm.ai",
+						"context · pricing · coding rank & score from modelgrep.com",
 					),
 				),
 			);

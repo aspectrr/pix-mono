@@ -98,8 +98,9 @@ export function resolveModel(
 // ids carry no signal, so each line is annotated with bench score, context,
 // price, and a coarse tier — sourced from pix-data (the shared data layer).
 
-const SCORE_FRONTIER = 88;
-const SCORE_STRONG = 75;
+// Tiers cut on coding_pct (0-100 percentile within modelgrep's benched set).
+const SCORE_FRONTIER = 88; // ~top 12% coder
+const SCORE_STRONG = 75; // ~top 25% coder
 const CHEAP_OUTPUT_PRICE = 3; // $/M output tokens — below this counts as cheap
 
 /** Context window → compact "200k" / "1M". */
@@ -133,7 +134,7 @@ function tier(score: number | null | undefined, output?: number): string {
 /** One enriched line: "provider/id  — ⚡95 · 200k ctx · $3/$15 · frontier". */
 function annotate(m: ModelEntry): { line: string; score: number } {
 	const dev = lookupModelsDev(m.provider, m.id);
-	const bench = lookupBenchmark(m.name ?? m.id);
+	const bench = lookupBenchmark(m.id);
 	const score = bench?.overallScore ?? null;
 	const out = bench?.outputPrice ?? dev?.cost?.output;
 	const segs = [

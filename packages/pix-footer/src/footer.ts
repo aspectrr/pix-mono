@@ -220,7 +220,7 @@ function renderModel(
 		const dev = lookupModelsDev(provider, id);
 		out += theme.fg("muted", ` · ${fmtCost(dev)}`);
 	}
-	const bench = lookupBenchmark(model?.name ?? id);
+	const bench = lookupBenchmark(id);
 	if (bench) {
 		const score = bench.overallScore ?? "?";
 		const scoreColor =
