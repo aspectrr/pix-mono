@@ -2,6 +2,12 @@ import type {
 	ExtensionAPI,
 	ExtensionCommandContext,
 } from "@earendil-works/pi-coding-agent";
+import { type ConfirmUI, confirmOverlay } from "@xynogen/pix-pretty/confirm";
+import {
+	openProgress,
+	type ProgressHandle,
+	type ProgressUI,
+} from "@xynogen/pix-pretty/progress";
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
@@ -11,7 +17,11 @@ export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
 // @xynogen/pix-* package from npm.
 export const PIX_INSTALL_URL =
 	"https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh";
-export const PIX_INSTALL_COMMAND = `curl -fsSL ${PIX_INSTALL_URL} | sh`;
+export const PIX_UNINSTALL_URL =
+	"https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh";
+// README upgrade path: uninstall then reinstall, so stale/renamed packages from
+// breaking changes are cleared before the fresh install.
+export const PIX_INSTALL_COMMAND = `curl -fsSL ${PIX_UNINSTALL_URL} | sh && curl -fsSL ${PIX_INSTALL_URL} | sh`;
 
 const TRANSIENT_PATTERNS = [
 	/eai_again/i,
@@ -87,6 +97,37 @@ export function formatUpdateSummary(
 		: summary;
 }
 
+export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+// 250ms (not 80ms): with up to 3 concurrent spinners during updateAll, a fast
+// cadence floods the TUI render queue and starves keystroke echo (typed chars
+// render out of order). 250ms still animates smoothly for a multi-minute op.
+const SPINNER_INTERVAL_MS = 250;
+
+type StatusUI = { setStatus(key: string, text: string | undefined): void };
+
+// Ticks a spinner status line while `work` runs; always clears it after.
+// `key` must be unique per concurrent caller — updateAll runs two of these in
+// parallel, so a shared key would let one clear the other's line.
+export async function withSpinner<T>(
+	ui: StatusUI,
+	key: string,
+	label: string,
+	work: () => Promise<T>,
+): Promise<T> {
+	let frame = 0;
+	ui.setStatus(key, `${SPINNER[0]} ${label}`);
+	const timer = setInterval(() => {
+		frame = (frame + 1) % SPINNER.length;
+		ui.setStatus(key, `${SPINNER[frame]} ${label}`);
+	}, SPINNER_INTERVAL_MS);
+	try {
+		return await work();
+	} finally {
+		clearInterval(timer);
+		ui.setStatus(key, undefined);
+	}
+}
+
 export async function resolveCommand(command: string, pi: ExtensionAPI) {
 	const result = await pi.exec(
 		"/bin/sh",
@@ -158,7 +199,12 @@ export async function detectInstallMethod(
 export async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
 	let lastOutput = "";
 	for (let attempt = 1; attempt <= 3; attempt++) {
-		const result = await pi.exec(spec.command, spec.args, { timeout: 180_000 });
+		// nice -n 19: deprioritize the install so the TUI keeps echoing keystrokes.
+		const result = await pi.exec(
+			"nice",
+			["-n", "19", spec.command, ...spec.args],
+			{ timeout: 180_000 },
+		);
 		lastOutput = [result.stdout, result.stderr]
 			.filter(Boolean)
 			.join("\n")
@@ -172,7 +218,11 @@ export async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
 	return { ok: false, output: lastOutput, attempts: 3 };
 }
 
-async function updatePi(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
+async function updatePi(
+	pi: ExtensionAPI,
+	ctx: ExtensionCommandContext,
+	progress?: ProgressHandle,
+): Promise<boolean> {
 	await (
 		ctx as ExtensionCommandContext & { waitForIdle?: () => Promise<void> }
 	).waitForIdle?.();
@@ -189,10 +239,10 @@ async function updatePi(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 			`Pi ${before}; install method appears native. Please update the native binary manually.`,
 			"warning",
 		);
-		return;
+		return false;
 	}
 
-	ctx.ui.notify(`Updating Pi via ${method}: ${spec.label}`, "info");
+	progress?.setLabel(`Updating Pi via ${method}…`);
 	const result = await runWithRetry(pi, spec);
 	const after = await currentVersion(pi).catch(() => "unknown");
 
@@ -201,42 +251,24 @@ async function updatePi(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 			`Pi update failed after ${result.attempts} attempt(s). ${result.output || "No output."}`,
 			"error",
 		);
-		return;
+		return false;
 	}
 
 	ctx.ui.notify(formatUpdateSummary(before, after, result.attempts), "info");
+	return true;
 }
 
-async function updateExtensions(
+async function updatePackages(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
+	progress?: ProgressHandle,
 ) {
-	ctx.ui.notify("Updating pix extensions from pix-mono setup", "info");
-	const result = await pi.exec("/bin/sh", ["-lc", PIX_INSTALL_COMMAND], {
-		timeout: 240_000,
-	});
-	const output = [result.stdout, result.stderr]
-		.filter(Boolean)
-		.join("\n")
-		.trim();
-	if ((result.code ?? 0) !== 0) {
-		ctx.ui.notify(
-			`Pi extensions update failed. ${output || "No output."}`,
-			"error",
-		);
-		return;
-	}
-	ctx.ui.notify(
-		"Pi extensions updated. Please run /reload to apply changes.",
-		"warning",
+	progress?.setLabel("Updating pi packages…");
+	const result = await pi.exec(
+		"nice",
+		["-n", "19", "pi", "update", "--extensions"],
+		{ timeout: 240_000 },
 	);
-}
-
-async function updatePackages(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
-	ctx.ui.notify("Updating pi packages (pi update --extensions)", "info");
-	const result = await pi.exec("pi", ["update", "--extensions"], {
-		timeout: 240_000,
-	});
 	const output = [result.stdout, result.stderr]
 		.filter(Boolean)
 		.join("\n")
@@ -248,18 +280,36 @@ async function updatePackages(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 		);
 		return;
 	}
-	ctx.ui.notify(
-		"Pi packages updated. Please run /reload to apply changes.",
-		"warning",
-	);
+	ctx.ui.notify("Pi packages updated.", "info");
 }
 
 async function updateAll(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
-	// updatePi must finish first (method detection + install), then the two
-	// extension refresh steps can run concurrently — they touch different
-	// registries (npm curl vs pi update --extensions) with no ordering dependency.
-	await updatePi(pi, ctx);
-	await Promise.all([updateExtensions(pi, ctx), updatePackages(pi, ctx)]);
+	if (ctx.hasUI) {
+		const ok = await confirmOverlay(ctx.ui as unknown as ConfirmUI, {
+			title: "Update Pi & extensions?",
+			body: ["Pi will close when the update finishes — relaunch to apply."],
+		});
+		if (!ok) {
+			ctx.ui.notify("Update cancelled.", "info");
+			return;
+		}
+	}
+	// A focused progress overlay owns input for the whole update, so keystrokes
+	// are swallowed instead of echoing out of order while the heavy install
+	// subprocesses compete with the TUI. Steps run serially + `nice`-d.
+	const progress = ctx.hasUI
+		? openProgress(ctx.ui as unknown as ProgressUI, "Updating Pi & extensions")
+		: undefined;
+	try {
+		await updatePi(pi, ctx, progress);
+		await updatePackages(pi, ctx, progress);
+	} finally {
+		progress?.close();
+	}
+	// Updates land on disk but need a fresh process to load. Quit so the
+	// next launch picks up new Pi + extensions; shutdown defers until idle.
+	ctx.ui.notify("Update complete. Closing Pi — relaunch to apply.", "warning");
+	(ctx as ExtensionCommandContext & { shutdown?: () => void }).shutdown?.();
 }
 
 export default function (pi: ExtensionAPI) {

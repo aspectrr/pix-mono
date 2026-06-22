@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-update",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Pi extension — /update self-update command",
 	"type": "module",
 	"main": "src/index.ts",
@@ -37,7 +37,11 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"dependencies": {
+		"@xynogen/pix-pretty": "*"
+	},
 	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*"
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
 	}
 }

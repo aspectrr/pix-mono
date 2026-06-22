@@ -10,8 +10,11 @@ import {
 	PACKAGE_NAME,
 	PIX_INSTALL_COMMAND,
 	PIX_INSTALL_URL,
+	PIX_UNINSTALL_URL,
 	resolveCommand,
 	runWithRetry,
+	SPINNER,
+	withSpinner,
 } from "./update.ts";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -167,16 +170,39 @@ describe("formatUpdateSummary", () => {
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
+describe("withSpinner", () => {
+	it("sets a spinner line then clears it, even when work throws", async () => {
+		const calls: Array<[string, string | undefined]> = [];
+		const ui = {
+			setStatus: (k: string, t: string | undefined) => calls.push([k, t]),
+		};
+		await expect(
+			withSpinner(ui, "k", "Working", async () => {
+				throw new Error("boom");
+			}),
+		).rejects.toThrow("boom");
+		// first call sets a spinner frame, last call clears the line.
+		expect(calls[0][0]).toBe("k");
+		expect(calls[0][1]).toContain("Working");
+		expect(calls[0][1]?.[0]).toBe(SPINNER[0]);
+		expect(calls.at(-1)).toEqual(["k", undefined]);
+	});
+});
+
 describe("constants", () => {
 	it("PIX_INSTALL_URL points to pix-mono main branch", () => {
 		expect(PIX_INSTALL_URL).toContain("xynogen/pix-mono");
 		expect(PIX_INSTALL_URL).toContain("install.sh");
 	});
 
-	it("PIX_INSTALL_COMMAND pipes the URL through sh", () => {
-		expect(PIX_INSTALL_COMMAND).toContain("curl");
+	it("PIX_INSTALL_COMMAND uninstalls then reinstalls via sh", () => {
+		expect(PIX_INSTALL_COMMAND).toContain(PIX_UNINSTALL_URL);
 		expect(PIX_INSTALL_COMMAND).toContain(PIX_INSTALL_URL);
-		expect(PIX_INSTALL_COMMAND).toContain("| sh");
+		// uninstall must run before install
+		expect(PIX_INSTALL_COMMAND.indexOf(PIX_UNINSTALL_URL)).toBeLessThan(
+			PIX_INSTALL_COMMAND.indexOf(PIX_INSTALL_URL),
+		);
+		expect(PIX_INSTALL_COMMAND).toContain("&&");
 	});
 });
 

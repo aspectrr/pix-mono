@@ -58,11 +58,12 @@
     },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.4.6",
+      "version": "0.4.9",
       "dependencies": {
         "@xynogen/pix-ask": "*",
         "@xynogen/pix-bash": "*",
         "@xynogen/pix-commands": "*",
+        "@xynogen/pix-data": "*",
         "@xynogen/pix-diagnostics": "*",
         "@xynogen/pix-display": "*",
         "@xynogen/pix-edit": "*",
@@ -105,7 +106,7 @@
     },
     "packages/pix-display": {
       "name": "@xynogen/pix-display",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@xynogen/pix-pretty": "*",
       },
@@ -149,6 +150,9 @@
     "packages/pix-gate": {
       "name": "@xynogen/pix-gate",
       "version": "0.1.4",
+      "dependencies": {
+        "@xynogen/pix-pretty": "*",
+      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -195,7 +199,7 @@
     },
     "packages/pix-optimizer": {
       "name": "@xynogen/pix-optimizer",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -203,7 +207,7 @@
     },
     "packages/pix-pretty": {
       "name": "@xynogen/pix-pretty",
-      "version": "1.6.4",
+      "version": "1.6.6",
       "dependencies": {
         "@ff-labs/fff-node": "^0.5.2",
         "cli-highlight": "^2.1.11",
@@ -260,6 +264,7 @@
       "name": "@xynogen/pix-sudo",
       "version": "0.2.2",
       "dependencies": {
+        "@xynogen/pix-pretty": "*",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {
@@ -292,9 +297,13 @@
     },
     "packages/pix-update": {
       "name": "@xynogen/pix-update",
-      "version": "0.1.7",
+      "version": "0.1.8",
+      "dependencies": {
+        "@xynogen/pix-pretty": "*",
+      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
       },
     },
     "packages/pix-welcome": {
