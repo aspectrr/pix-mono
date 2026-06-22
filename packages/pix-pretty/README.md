@@ -21,6 +21,10 @@ Complete rendering and formatting solution for Pi Coding Agent with syntax highl
 - **Atomic deletion** - Delete entire paste markers as single units
 - **Type-aware labels** - Visual distinction between image and text pastes
 
+### Permission Dialog Overlay
+
+- **Shared gate overlay** - `showOverlay(ui, config)` (export `./gate-overlay`) is the one permission-dialog component used by both `pix-gate` and `pix-sudo`. Two modes: `mode:"confirm"` shows a SelectList only; `mode:"sudo"` shows a SelectList then a masked password stage. Returns `{ action: "approved" | "denied" | "timeout", password? }`. All dialogs are padded (`Box` `paddingX=2`, `paddingY=1`). The simpler `./confirm` export stays for plain boolean Yes/No prompts — `gate-overlay` is its richer multi-choice, password-capable sibling.
+
 ### Reasoning Tag Rendering
 
 - **Live streaming** - Splits `<think>`/`<thinking>` regions into native Pi `thinking` content blocks token-by-token during streaming
