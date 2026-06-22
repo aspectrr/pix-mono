@@ -111,7 +111,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				"todo(action, items?, id?, status?, text?) — action: list|set|add|update|clear. Use to track implementation progress, especially when executing a plan.",
 			promptGuidelines: [
 				"When you start executing a multi-step plan in BUILD mode, seed the todo list with `todo(action:'set', items: <plan Implementation Phases>)`.",
-				"Mark each item in_progress before working it via `todo(action:'update', id, status)`; opening one auto-closes the previous in_progress item, so just open the next.",
+				"Mark each item in_progress before working it via `todo(action:'update', id, status)`; opening one auto-closes every earlier item, so just open the next and skipped steps mark done themselves.",
 				"Call `todo(action:'list')` to recover your place after long runs or context compaction.",
 			],
 			parameters: Type.Object({
@@ -215,11 +215,17 @@ export default function registerTodo(pi: ExtensionAPI): void {
 						const t = todos.find((x) => x.id === params.id);
 						if (!t) return fail(`No todo with id ${params.id}.`);
 						if (params.status) {
-							// Single-active invariant: opening a new task closes any other
-							// in_progress one, so the checklist always shows one focus.
+							// Sequential-progress invariant: opening a task means everything
+							// before it is finished. Cascade-close every earlier pending or
+							// in_progress item (ids are sequential) so the model never has to
+							// mark skipped steps done by hand. `blocked` is left untouched.
 							if (params.status === "in_progress")
 								for (const other of todos)
-									if (other.id !== t.id && other.status === "in_progress")
+									if (
+										other.id < t.id &&
+										(other.status === "pending" ||
+											other.status === "in_progress")
+									)
 										other.status = "done";
 							t.status = params.status;
 						}

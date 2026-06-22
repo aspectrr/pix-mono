@@ -357,6 +357,50 @@ describe("todo actions", () => {
 		expect(out).toContain("Todos 1/3 done");
 	});
 
+	test("opening a later item cascade-closes skipped pending items", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit(
+			"session_start",
+			{},
+			{ sessionManager: host.sessionManager },
+		);
+		await run(host.execute, { action: "set", items: "a\nb\nc\nd" });
+		// Jump straight to id 4 without opening 1-3; they should all auto-close.
+		const result = await run(host.execute, {
+			action: "update",
+			id: 4,
+			status: "in_progress",
+		});
+		const out = text(result);
+		expect(out).toContain("● 1. a");
+		expect(out).toContain("● 2. b");
+		expect(out).toContain("● 3. c");
+		expect(out).toContain("◐ 4. d");
+		expect(out).toContain("Todos 3/4 done");
+	});
+
+	test("cascade-close leaves a blocked earlier item untouched", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit(
+			"session_start",
+			{},
+			{ sessionManager: host.sessionManager },
+		);
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		await run(host.execute, { action: "update", id: 1, status: "blocked" });
+		const result = await run(host.execute, {
+			action: "update",
+			id: 3,
+			status: "in_progress",
+		});
+		const out = text(result);
+		expect(out).toContain("⊘ 1. a"); // still blocked, not force-closed
+		expect(out).toContain("● 2. b"); // pending -> done
+		expect(out).toContain("◐ 3. c");
+	});
+
 	test("update unknown id returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
@@ -439,8 +483,10 @@ describe("todo actions", () => {
 			{ sessionManager: host.sessionManager },
 		);
 		await run(host.execute, { action: "set", items: "a\nb\nc\nd" });
-		await run(host.execute, { action: "update", id: 1, status: "pending" });
+		// Open id 2 first (cascade-closes nothing earlier we assert on), then set
+		// the others directly so each glyph is exercised without cascade interfering.
 		await run(host.execute, { action: "update", id: 2, status: "in_progress" });
+		await run(host.execute, { action: "update", id: 1, status: "pending" });
 		await run(host.execute, { action: "update", id: 3, status: "done" });
 		await run(host.execute, { action: "update", id: 4, status: "blocked" });
 		const out = text(await run(host.execute, { action: "list" }));
