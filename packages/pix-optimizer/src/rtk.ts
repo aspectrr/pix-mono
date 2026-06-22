@@ -93,7 +93,7 @@ export function applyRtkRewrite(
 
 const RTK_SYSTEM_PROMPT = `# RTK — token-optimized command wrapper
 
-Prefix shell commands with \`rtk\` (e.g. \`rtk git status\`). RTK compacts output for git, gh, cargo, npm/pnpm/yarn/bun, tsc, lint, vitest/jest/playwright, docker, kubectl, ls, grep, find, prisma — and passes anything else through unchanged, so it's always safe.
+Prefix shell commands with \`rtk\` (e.g. \`rtk git status\`). RTK compacts output for git, gh, cargo, npm/pnpm/yarn/bun, tsc, lint, vitest/jest/playwright, docker, kubectl, ls, grep, prisma — and passes anything else through unchanged, so it's always safe.
 
 Prefix EVERY segment in a chain, not just the first:
 \`rtk git add . && rtk git commit -m "msg" && rtk git push\`
@@ -106,7 +106,6 @@ const RTK_COMMANDS = new Set([
 	"gh",
 	"ls",
 	"tree",
-	"find",
 	"grep",
 	"cat",
 	"head",

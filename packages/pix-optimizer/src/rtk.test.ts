@@ -68,6 +68,11 @@ describe("rewriteChain", () => {
 		expect(rewriteChain("echo hi && mkdir x")).toBe("echo hi && mkdir x");
 	});
 
+	it("does not prefix find (rtk find rejects -not/-exec)", () => {
+		const cmd = "find . -type f -not -path '*/node_modules/*'";
+		expect(rewriteChain(cmd)).toBe(cmd);
+	});
+
 	it("only prefixes known segments in a mixed chain", () => {
 		expect(rewriteChain("cd /tmp && git status")).toBe(
 			"cd /tmp && rtk git status",
