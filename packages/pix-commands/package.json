@@ -1,7 +1,7 @@
 {
 	"name": "@xynogen/pix-commands",
-	"version": "0.1.5",
-	"description": "Pi extension — /clear command",
+	"version": "0.1.6",
+	"description": "Pi extension — slash commands (/clear; more planned)",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
