@@ -23,13 +23,16 @@ set -eu
 
 # CORE module — pix-core meta extension, its sub-packages, and the shared
 # pix-data model data layer they read from.
+#
+# pix-update is intentionally EXCLUDED: it must survive an uninstall so the
+# updater is never removed mid-flow. It is refreshed only via
+# `pi update --extensions`, never via this uninstall+reinstall sweep.
 CORE_PACKAGES="
 npm:@xynogen/pix-data
 npm:@xynogen/pix-core
 npm:@xynogen/pix-welcome
 npm:@xynogen/pix-footer
 npm:@xynogen/pix-commands
-npm:@xynogen/pix-update
 npm:@xynogen/pix-nudge
 npm:@xynogen/pix-diagnostics
 npm:@xynogen/pix-prompts
