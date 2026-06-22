@@ -56,7 +56,6 @@ const BG_ADD_W = envBg("DIFF_BG_ADD_HL", "\x1b[48;2;35;75;50m"); // word emphasi
 const BG_DEL_W = envBg("DIFF_BG_DEL_HL", "\x1b[48;2;80;35;35m");
 const BG_GUTTER_ADD = envBg("DIFF_BG_GUTTER_ADD", "\x1b[48;2;18;32;26m");
 const BG_GUTTER_DEL = envBg("DIFF_BG_GUTTER_DEL", "\x1b[48;2;38;22;22m");
-const BG_EMPTY = "\x1b[48;2;18;18;18m"; // filler rows when one side is shorter
 
 const FG_ADD = envFg("DIFF_FG_ADD", "\x1b[38;2;100;180;120m"); // desaturated green
 const FG_DEL = envFg("DIFF_FG_DEL", "\x1b[38;2;200;100;100m"); // desaturated red
@@ -912,21 +911,13 @@ export async function renderSplit(
 		}
 
 		const maxRowsN = Math.max(lResult.bodyRows.length, rResult.bodyRows.length);
-		const leftIsEmpty = !r.left;
-		const rightIsEmpty = !r.right;
 		for (let row = 0; row < maxRowsN; row++) {
 			const lg = row === 0 ? lResult.gutter : lResult.contGutter;
 			const rg = row === 0 ? rResult.gutter : rResult.contGutter;
-			const lb =
-				lResult.bodyRows[row] ??
-				(leftIsEmpty
-					? stripes(cw, stripeRow)
-					: `${BG_EMPTY}${" ".repeat(cw)}${RST}`);
-			const rb =
-				rResult.bodyRows[row] ??
-				(rightIsEmpty
-					? stripes(cw, stripeRow)
-					: `${BG_EMPTY}${" ".repeat(cw)}${RST}`);
+			// A missing body row means this side has no content at this visual row
+			// (other side wrapped longer, or the side is empty) — always hatch it.
+			const lb = lResult.bodyRows[row] ?? stripes(cw, stripeRow);
+			const rb = rResult.bodyRows[row] ?? stripes(cw, stripeRow);
 			out.push(`${lg}${lb}${DIVIDER}${rg}${rb}${RST}`);
 			stripeRow++;
 		}
