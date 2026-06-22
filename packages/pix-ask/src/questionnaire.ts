@@ -13,6 +13,8 @@ import {
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 import { dim } from "./components.js";
+import { frameLines, modalWidth } from "./frame.js";
+import { checkboxGlyphs, selectionGlyph } from "./glyphs.js";
 import { safeMarkdownTheme, sentinelsFor } from "./helpers.js";
 import type { OptionData, Params, QuestionData } from "./schema.js";
 import {
@@ -251,11 +253,9 @@ export class AskQuestionnaire extends Container {
 	// ── Input handling ─────────────────────────────────────────────────
 
 	handleInput(data: string): void {
-		if (this.keybindings.matches(data, "tui.select.cancel")) {
-			this.cancel();
-			return;
-		}
-
+		// Input mode owns esc (back to options) — handle it BEFORE the global
+		// cancel guard, which is also bound to esc and would otherwise close the
+		// whole questionnaire instead of stepping back.
 		if (this.inputMode) {
 			if (matchesKey(data, Key.escape)) {
 				this.inputMode = false;
@@ -263,8 +263,17 @@ export class AskQuestionnaire extends Container {
 				this.refresh();
 				return;
 			}
+			if (this.keybindings.matches(data, "tui.select.cancel")) {
+				this.cancel();
+				return;
+			}
 			this.ensureEditor().handleInput(data);
 			this.tui.requestRender();
+			return;
+		}
+
+		if (this.keybindings.matches(data, "tui.select.cancel")) {
+			this.cancel();
 			return;
 		}
 
@@ -389,12 +398,23 @@ export class AskQuestionnaire extends Container {
 		const isMulti = !!this.currentQ.multiSelect;
 		const items = this.mainListItems;
 		const total = items.length;
-		const chk = (i: number) =>
-			isMulti
-				? this.multiChecked.has(i)
-					? t.fg("success", "✓")
-					: t.fg("dim", "○")
-				: "";
+		const box = checkboxGlyphs();
+		// Glyph per option: checkbox (▣/☐) for multi, radio (◉/○) for single.
+		// `sel` = cursor row; for radio the cursor row IS the chosen one.
+		const glyphFor = (optIdx: number, sel: boolean): string => {
+			const g = selectionGlyph({
+				multi: isMulti,
+				selected: sel,
+				checked: this.multiChecked.has(optIdx),
+			});
+			// width-safety fallback only affects the checkbox pair
+			const glyph = isMulti
+				? this.multiChecked.has(optIdx)
+					? box.checked
+					: box.unchecked
+				: g.glyph;
+			return t.fg(g.color as Parameters<typeof t.fg>[0], glyph);
+		};
 
 		if (total === 0) return [t.fg("warning", "No options")];
 
@@ -409,7 +429,10 @@ export class AskQuestionnaire extends Container {
 		const end = Math.min(start + maxVisible, total);
 
 		const lines: string[] = [];
-		const pad = "   ";
+		// Hang-indent descriptions under the LABEL column, not the pointer.
+		// Prefix is `→ G ` = ptr(1)+sp(1)+glyph(1)+sp(1) = 4 cols.
+		const LABEL_COL = 4;
+		const pad = " ".repeat(LABEL_COL);
 
 		for (let i = start; i < end; i++) {
 			const item = items[i]!;
@@ -418,18 +441,15 @@ export class AskQuestionnaire extends Container {
 
 			if (item.kind === "option" && item.option) {
 				const optIdx = this.filteredOptions.indexOf(item.option);
-				const checkbox = isMulti ? ` ${chk(optIdx)}` : "";
-				const num = t.fg("dim", `${optIdx + 1}.`);
+				const glyph = glyphFor(optIdx, sel);
 				const label = sel
 					? t.fg("accent", t.bold(item.option.label))
 					: t.fg("text", t.bold(item.option.label));
-				lines.push(
-					truncateToWidth(`${ptr} ${num}${checkbox} ${label}`, inner, ""),
-				);
+				lines.push(truncateToWidth(`${ptr} ${glyph} ${label}`, inner, ""));
 				if (item.option.description) {
 					const wrapped = wrapTextWithAnsi(
 						item.option.description,
-						Math.max(10, inner - 6),
+						Math.max(10, inner - LABEL_COL),
 					);
 					for (const w of wrapped) {
 						lines.push(truncateToWidth(`${pad}${t.fg("muted", w)}`, inner, ""));
@@ -488,8 +508,12 @@ export class AskQuestionnaire extends Container {
 		);
 	}
 
-	override render(width: number): string[] {
-		const inner = Math.max(20, width - 4);
+	override render(termWidth: number): string[] {
+		// Cap to a fixed-width floating modal; render content at the inner width
+		// and frame it with a rounded border (see frameLines).
+		const mw = modalWidth(termWidth);
+		const width = mw - 4; // border (2) + padding (2)
+		const inner = Math.max(20, width);
 		const t = this.theme;
 		const isMulti = !!this.currentQ.multiSelect;
 		const hasPreview =
@@ -498,15 +522,16 @@ export class AskQuestionnaire extends Container {
 			!!this.selectedItem?.option?.preview;
 
 		const useSplit = hasPreview && width >= SPLIT_PANE_MIN_WIDTH;
-		const leftWidth = useSplit ? Math.floor((width - 6) * 0.45) : inner;
-		const previewWidth = useSplit ? Math.max(20, width - leftWidth - 10) : 0;
+		const leftWidth = useSplit ? Math.floor((width - 2) * 0.45) : inner;
+		const previewWidth = useSplit ? Math.max(20, width - leftWidth - 3) : 0;
 
 		const lines: string[] = [];
 
 		const row = (content: string): string =>
-			` ${truncateToWidth(content, Math.max(0, width - 1), "")}`;
+			truncateToWidth(content, width, "");
 
-		// Tab bar
+		// Tab bar — rendered as the framed top edge (frameLines `top`).
+		let top: string | undefined;
 		if (this.params.questions.length > 1) {
 			const tabParts: string[] = [];
 			for (let i = 0; i < this.params.questions.length; i++) {
@@ -514,7 +539,7 @@ export class AskQuestionnaire extends Container {
 				const tag = `${i + 1}.${this.params.questions[i]?.header}`;
 				tabParts.push(active ? t.fg("accent", t.bold(tag)) : t.fg("dim", tag));
 			}
-			lines.push(row(tabParts.join(t.fg("dim", "  "))));
+			top = truncateToWidth(tabParts.join(t.fg("dim", "  ")), width, "");
 		}
 
 		// Header chip
@@ -538,14 +563,13 @@ export class AskQuestionnaire extends Container {
 			lines.push("");
 			lines.push(row(t.fg("accent", t.bold("Type your response:"))));
 			lines.push("");
-			const editorLines = this.ensureEditor().render(Math.max(0, width - 1));
+			const editorLines = this.ensureEditor().render(width);
 			for (const el of editorLines) {
-				lines.push(` ${truncateToWidth(el, Math.max(0, width - 1), "")}`);
+				lines.push(truncateToWidth(el, width, ""));
 			}
 			lines.push("");
 			lines.push(row(dim(t)("enter submit • esc back • ctrl+c cancel")));
-			lines.push("");
-			return lines.map((l) => truncateToWidth(l, width, ""));
+			return this.frame(mw, lines, top);
 		}
 
 		// Search bar
@@ -564,26 +588,17 @@ export class AskQuestionnaire extends Container {
 		lines.push(row(`  ${t.fg("dim", "💬")} ${chatLabel}`));
 
 		// Options (with optional split-pane preview)
-		const optionLines = this.renderOptions(useSplit ? leftWidth : width - 4);
+		const optionLines = this.renderOptions(useSplit ? leftWidth : width);
 		const previewLines = useSplit ? this.renderPreview(previewWidth) : [];
 		const maxOptLines = Math.max(optionLines.length, previewLines.length);
 
 		if (useSplit) {
 			const sep = t.fg("dim", SEPARATOR);
 			for (let i = 0; i < maxOptLines; i++) {
-				const left = truncateToWidth(
-					optionLines[i] ?? "",
-					leftWidth - 1,
-					"",
-					true,
-				);
-				const right = truncateToWidth(
-					previewLines[i] ?? "",
-					previewWidth - 2,
-					"",
-				);
-				const body = `${left || " ".repeat(leftWidth - 1)}${sep}${right || " ".repeat(previewWidth - 2)}`;
-				lines.push(` ${truncateToWidth(body, Math.max(0, width - 1), "")}`);
+				const left = truncateToWidth(optionLines[i] ?? "", leftWidth, "", true);
+				const right = truncateToWidth(previewLines[i] ?? "", previewWidth, "");
+				const body = `${left || " ".repeat(leftWidth)}${sep}${right || " ".repeat(previewWidth)}`;
+				lines.push(truncateToWidth(body, width, ""));
 			}
 		} else {
 			for (const line of optionLines) lines.push(row(line));
@@ -602,8 +617,23 @@ export class AskQuestionnaire extends Container {
 					"ctrl+c cancel",
 				];
 		lines.push(row(dim(t)(hintParts.join(" • "))));
-		lines.push("");
 
-		return lines.map((l) => truncateToWidth(l, width, ""));
+		return this.frame(mw, lines, top);
+	}
+
+	/** Wrap body lines in the rounded modal border at the given outer width. */
+	private frame(
+		outerWidth: number,
+		lines: string[],
+		top: string | undefined,
+	): string[] {
+		const t = this.theme;
+		return frameLines({
+			width: outerWidth,
+			lines,
+			top,
+			color: (s) => t.fg("accent", s),
+			bg: (s) => t.bg("customMessageBg", s),
+		});
 	}
 }

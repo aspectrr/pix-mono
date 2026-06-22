@@ -88,6 +88,7 @@ export default function registerAsk(pi: ExtensionAPI): void {
 						}
 						return new AskQuestionnaire(typed, tui, theme, keybindings, done);
 					},
+					{ overlay: true },
 				);
 
 				if (!result || result.cancelled) {
