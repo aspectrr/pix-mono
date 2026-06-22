@@ -8,7 +8,7 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh | sh
 #   # or, from a local checkout:
-#   sh scripts/uninstall.sh   # or: bun run uninstall:distro
+#   sh scripts/uninstall.sh   # or: bun run distro:uninstall
 set -eu
 
 # NOTE: this list is intentionally NOT symmetric with install.sh.

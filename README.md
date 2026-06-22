@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/insta
 Or from a local checkout:
 
 ```bash
-sh scripts/install.sh   # or: bun run install:distro
+sh scripts/install.sh   # or: bun run distro:install
 ```
 
 ## Uninstall
@@ -109,7 +109,7 @@ curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/unins
 Or from a local checkout:
 
 ```bash
-sh scripts/uninstall.sh   # or: bun run uninstall:distro
+sh scripts/uninstall.sh   # or: bun run distro:uninstall
 ```
 
 ### Upgrade / clean reinstall
