@@ -26,7 +26,9 @@ classification logic can be reused without the TUI:
 - `@xynogen/pix-gate/lib` — pure rules: `DEFAULT_RULES`, `buildRules`,
   `classify`, `loadUserConfig`, `isSudoCommand`. No Pi/TUI dependency.
 - `@xynogen/pix-gate/prompt` — `promptGateDecision()`, the confirm/deny dialog
-  (depends on `pi-tui`).
+  (depends on `pi-tui`). This is now a thin adapter over the shared
+  `@xynogen/pix-pretty/gate-overlay` component, so the gate and `sudo_run`
+  dialogs share one implementation.
 
 `pix-skills` imports `./lib` to gate skill `` !`cmd` `` directives with the same
 rules as the bash tool (auto-deny on match, no prompt).

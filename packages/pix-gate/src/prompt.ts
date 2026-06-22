@@ -1,14 +1,15 @@
 /**
- * pix-gate — Part 2: the prompt.
+ * pix-gate — prompt.ts
  *
- * The interactive confirm/deny dialog, decoupled from the rule engine (lib.ts).
- * Returns a pure decision; the caller maps it to a tool-call result and emits
- * any notifications. This lets the rule engine be reused without the TUI dep.
+ * Thin adapter: maps gate severity/rule → showOverlay (pix-pretty).
+ * All dialog logic lives in @xynogen/pix-pretty/gate-overlay.
  */
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-import { Box, type SelectItem, SelectList, Text } from "@earendil-works/pi-tui";
+import {
+	type OverlayResult,
+	showOverlay,
+} from "@xynogen/pix-pretty/gate-overlay";
 import type { Rule } from "./lib.ts";
 
 export interface GateDecision {
@@ -17,7 +18,6 @@ export interface GateDecision {
 	reason: string;
 }
 
-/** The UI surface the dialog needs — the extension context's `ui`. */
 export type GatePromptUI = ExtensionContext["ui"];
 
 const TIMEOUT_MS: Record<Rule["severity"], number> = {
@@ -26,34 +26,33 @@ const TIMEOUT_MS: Record<Rule["severity"], number> = {
 	risky: 60_000,
 };
 
-const SEVERITY_COLOR = {
+const SEVERITY_COLOR: Record<Rule["severity"], string> = {
 	critical: "error",
 	dangerous: "warning",
 	risky: "accent",
-} as const satisfies Record<Rule["severity"], string>;
+};
 
-const SEVERITY_ICON: Record<Rule["severity"], string> = {
+export const SEVERITY_ICON: Record<Rule["severity"], string> = {
 	critical: "🛑",
 	dangerous: "⚠️ ",
 	risky: "❓",
 };
 
 /**
- * Show the confirm/deny dialog for a matched command and resolve the decision.
- * Critical defaults to deny-first; dangerous/risky default to allow-first.
- * Times out to a denial after a severity-scaled deadline.
+ * Show the confirm/deny dialog for a matched command.
+ * Critical is deny-first; dangerous/risky are allow-first.
  */
 export async function promptGateDecision(
 	ui: GatePromptUI,
 	hit: Rule,
 	command: string,
 ): Promise<GateDecision> {
-	const timeoutMs = TIMEOUT_MS[hit.severity];
-	const severityColor = SEVERITY_COLOR[hit.severity];
 	const icon = SEVERITY_ICON[hit.severity];
 	const label = hit.severity.toUpperCase();
+	const accent = SEVERITY_COLOR[hit.severity];
 
-	const choices: SelectItem[] =
+	// critical: deny listed first so it's the default selected item
+	const choices =
 		hit.severity === "critical"
 			? [
 					{
@@ -68,11 +67,7 @@ export async function promptGateDecision(
 					},
 				]
 			: [
-					{
-						value: "yes",
-						label: "Yes, allow",
-						description: "Run the command",
-					},
+					{ value: "yes", label: "Yes, allow", description: "Run the command" },
 					{
 						value: "no",
 						label: "No, block it",
@@ -80,97 +75,21 @@ export async function promptGateDecision(
 					},
 				];
 
-	const controller = new AbortController();
-	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-	const choice = await ui.custom<string | null>(
-		(tui, theme, _kb, done) => {
-			const container = new Box(0, 0, (s) => theme.bg("customMessageBg", s));
-
-			container.addChild(
-				new DynamicBorder((s: string) => theme.fg(severityColor, s)),
-			);
-
-			container.addChild(
-				new Text(
-					`${icon} ` +
-						theme.fg(severityColor, theme.bold(label)) +
-						theme.fg("muted", ` — ${hit.reason}`),
-					1,
-					0,
-				),
-			);
-
-			container.addChild(new Text(theme.fg("toolOutput", command), 2, 0));
-
-			const deadlineMs = Date.now() + timeoutMs;
-			const countdownText = new Text("", 1, 0);
-			const updateCountdown = () => {
-				const remaining = Math.max(
-					0,
-					Math.ceil((deadlineMs - Date.now()) / 1000),
-				);
-				countdownText.setText(
-					theme.fg("dim", "Auto-deny in ") +
-						theme.fg(remaining <= 5 ? severityColor : "muted", `${remaining}s`),
-				);
-			};
-			updateCountdown();
-			const ticker = setInterval(() => {
-				updateCountdown();
-				tui.requestRender();
-			}, 1000);
-			container.addChild(countdownText);
-
-			const list = new SelectList(choices, choices.length, {
-				selectedPrefix: (t) => theme.fg(severityColor, t),
-				selectedText: (t) => theme.fg(severityColor, t),
-				description: (t) => theme.fg("muted", t),
-				scrollInfo: (t) => theme.fg("dim", t),
-				noMatch: (t) => theme.fg("warning", t),
-			});
-			const finish = (v: string | null) => {
-				clearInterval(ticker);
-				done(v);
-			};
-			list.onSelect = (item) => finish(item.value);
-			list.onCancel = () => finish(null);
-			container.addChild(list);
-
-			container.addChild(
-				new Text(
-					theme.fg("dim", "↑↓ navigate • enter select • esc cancel"),
-					1,
-					0,
-				),
-			);
-
-			container.addChild(
-				new DynamicBorder((s: string) => theme.fg(severityColor, s)),
-			);
-
-			controller.signal.addEventListener("abort", () => finish(null));
-
-			return {
-				render: (w: number) => container.render(w),
-				invalidate: () => container.invalidate(),
-				handleInput: (data: string) => {
-					list.handleInput(data);
-					tui.requestRender();
-				},
-			};
+	const result: OverlayResult = await showOverlay(
+		ui as Parameters<typeof showOverlay>[0],
+		{
+			mode: "confirm",
+			title: `${icon} ${label} — ${hit.reason}`,
+			body: [command],
+			accent,
+			timeoutMs: TIMEOUT_MS[hit.severity],
+			choices,
 		},
-		{ overlay: true },
 	);
 
-	clearTimeout(timeoutId);
-
-	const approved = choice === "yes";
-	if (approved) return { approved: true, reason: "Approved" };
-	return {
-		approved: false,
-		reason: controller.signal.aborted ? "Timed out" : "Blocked by user",
-	};
+	if (result.action === "approved")
+		return { approved: true, reason: "Approved" };
+	if (result.action === "timeout")
+		return { approved: false, reason: "Timed out" };
+	return { approved: false, reason: "Blocked by user" };
 }
-
-export { SEVERITY_ICON };
