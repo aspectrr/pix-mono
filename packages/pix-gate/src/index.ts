@@ -137,8 +137,7 @@ export default function (pi: ExtensionAPI): void {
 			);
 			return {
 				block: true,
-				reason:
-					"[DANGEROUS] privilege escalation — use sudo_run tool, it handles authentication securely.",
+				reason: "Use sudo_run tool instead of sudo in bash.",
 			};
 		}
 
