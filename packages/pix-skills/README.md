@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 28 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 29 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
 
 ## How it works
 
@@ -37,6 +37,7 @@ All skills are model-invocable — pi auto-loads each one on description match. 
 | `commit` | Split, write, and maintain Conventional-Commit-style commits |
 | `debug` | Root-cause analysis and self-annealing error resolution |
 | `diff` | Review current git changes via pre-populated status + staged/unstaged diffs |
+| `environment` | Detect OS/distro/kernel/arch/user/CPU before running platform-specific commands |
 | `explain` | Technical deconstruction and logic tracing of existing code |
 | `finish` | Structured branch completion — verify, decide, clean up |
 | `graphify` | Codebase questions via a persistent knowledge graph |
