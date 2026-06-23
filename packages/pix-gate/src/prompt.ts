@@ -18,6 +18,15 @@ export interface GateDecision {
 	reason: string;
 }
 
+/** Single concern — path hit or command hit — shown in the merged dialog body. */
+export interface Concern {
+	icon: string;
+	label: string;
+	detail: string;
+	/** Highest severity tier (for dialog behavior). "critical" > "block" > "dangerous" > "warn" > "risky". */
+	tier: number;
+}
+
 export type GatePromptUI = ExtensionContext["ui"];
 
 const TIMEOUT_MS: Record<Rule["severity"], number> = {
@@ -115,6 +124,106 @@ export async function promptPathDecision(
 		return { approved: false, reason: "Timed out" };
 	return { approved: false, reason: "Blocked by user" };
 }
+
+/** Tier for dialog behavior — higher = more restrictive (deny-first, shorter timeout). */
+const SEVERITY_TIER: Record<string, number> = {
+	critical: 5,
+	block: 4,
+	dangerous: 3,
+	warn: 2,
+	risky: 1,
+};
+
+/**
+ * Show a single merged dialog for a bash command that hit BOTH path rules AND
+ * command-gate rules. Combines all concerns under one title, one confirm/deny.
+ */
+export async function promptMergedGateDecision(
+	ui: GatePromptUI,
+	concerns: Concern[],
+	command: string,
+): Promise<GateDecision> {
+	// Sort by tier desc so the highest-severity concern drives dialog behavior.
+	const sorted = [...concerns].sort((a, b) => b.tier - a.tier);
+	const highest = sorted[0];
+	const isRestrictive = highest.tier >= SEVERITY_TIER.block; // block or critical
+
+	// Title: unique severity types, joined with " + "
+	const seenLabels = new Set<string>();
+	const uniqueLabels: string[] = [];
+	for (const c of sorted) {
+		const key = `${c.icon} ${c.label}`;
+		if (!seenLabels.has(key)) {
+			seenLabels.add(key);
+			uniqueLabels.push(key);
+		}
+	}
+	const titleSuffix =
+		command.length > 55 ? `${command.slice(0, 52)}…` : command;
+	const title = `${uniqueLabels.join(" + ")} — ${titleSuffix}`;
+
+	// Body: command + concern list
+	const body = [
+		command,
+		"",
+		...sorted.map((c) => `${c.icon} ${c.label} — ${c.detail}`),
+	];
+
+	const accent =
+		highest.tier >= SEVERITY_TIER.critical
+			? "error"
+			: highest.tier >= SEVERITY_TIER.block
+				? "error"
+				: highest.tier >= SEVERITY_TIER.dangerous
+					? "warning"
+					: "accent";
+
+	const timeoutMs =
+		highest.tier >= SEVERITY_TIER.block
+			? TIMEOUT_BY_TIER.block
+			: highest.tier >= SEVERITY_TIER.dangerous
+				? TIMEOUT_BY_TIER.dangerous
+				: TIMEOUT_BY_TIER.risky;
+
+	const choices = isRestrictive
+		? [
+				{
+					value: "no",
+					label: "No, block it",
+					description: "Prevent this command from running",
+				},
+				{
+					value: "yes",
+					label: "Yes, I understand the risk",
+					description: "Allow once",
+				},
+			]
+		: [
+				{ value: "yes", label: "Yes, allow", description: "Run the command" },
+				{
+					value: "no",
+					label: "No, block it",
+					description: "Prevent this command from running",
+				},
+			];
+
+	const result: OverlayResult = await showOverlay(
+		ui as Parameters<typeof showOverlay>[0],
+		{ mode: "confirm", title, body, accent, timeoutMs, choices },
+	);
+
+	if (result.action === "approved")
+		return { approved: true, reason: "Approved" };
+	if (result.action === "timeout")
+		return { approved: false, reason: "Timed out" };
+	return { approved: false, reason: "Blocked by user" };
+}
+
+const TIMEOUT_BY_TIER: Record<string, number> = {
+	block: 15_000,
+	dangerous: 30_000,
+	risky: 60_000,
+};
 
 /**
  * Show the confirm/deny dialog for a matched command.

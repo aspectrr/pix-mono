@@ -27,8 +27,11 @@ import {
 	loadUserConfig,
 } from "./lib.ts";
 import {
+	type Concern,
+	type GateDecision,
 	PATH_SEVERITY_ICON,
 	promptGateDecision,
+	promptMergedGateDecision,
 	promptPathDecision,
 	SEVERITY_ICON,
 } from "./prompt.ts";
@@ -36,10 +39,14 @@ import {
 export default function (pi: ExtensionAPI): void {
 	const { rules, autoApprove, pathRules } = buildRules(loadUserConfig());
 
-	// ── Path protection ──────────────────────────────────────────────────────
+	// ── Path protection (read/write/edit tools only — bash handled below) ───
 	pi.on("tool_call", async (event, ctx) => {
 		const tool = String(event.toolName);
 		const input = event.input as Record<string, unknown>;
+
+		// bash is handled by the unified gate below
+		if (tool === "bash") return undefined;
+
 		let path: string | undefined;
 		let op: "read" | "write";
 
@@ -49,32 +56,6 @@ export default function (pi: ExtensionAPI): void {
 		} else if (tool === "write" || tool === "edit") {
 			path = String(input.path ?? "");
 			op = "write";
-		} else if (tool === "bash") {
-			const cmd = String(input.command ?? "");
-			const candidates = extractPathsFromBash(cmd);
-			for (const p of candidates) {
-				const hit = classifyPath(p, "read", pathRules);
-				if (!hit) continue;
-				if (hit.severity === "info") {
-					ctx.ui.notify(
-						`${PATH_SEVERITY_ICON.info} ${hit.reason}: ${p}`,
-						"info",
-					);
-					continue;
-				}
-				if (!ctx.hasUI)
-					return {
-						block: true,
-						reason: `[PATH:${hit.severity.toUpperCase()}] ${hit.reason} (no UI)`,
-					};
-				const decision = await promptPathDecision(ctx.ui, hit, "bash read", p);
-				if (!decision.approved)
-					return {
-						block: true,
-						reason: `[PATH] ${decision.reason}: ${hit.reason}`,
-					};
-			}
-			return undefined;
 		} else {
 			return undefined;
 		}
@@ -106,6 +87,15 @@ export default function (pi: ExtensionAPI): void {
 		return undefined;
 	});
 
+	// ── Unified bash gate (path + command concerns in ONE dialog) ───────────
+	const SEVERITY_TIER: Record<string, number> = {
+		critical: 5,
+		block: 4,
+		dangerous: 3,
+		warn: 2,
+		risky: 1,
+	};
+
 	pi.on("tool_call", async (event, ctx) => {
 		if (event.toolName !== "bash") return undefined;
 
@@ -114,22 +104,42 @@ export default function (pi: ExtensionAPI): void {
 
 		if (autoApprove.some((re) => re.test(command))) return undefined;
 
-		const hit = classify(command, rules);
-		if (!hit) return undefined;
+		// Collect all concerns: path hits + command hit
+		const concerns: Concern[] = [];
 
-		const icon = SEVERITY_ICON[hit.severity];
-		const label = hit.severity.toUpperCase();
-
-		// No UI: can't show dialog — auto-block critical/dangerous, pass risky.
-		if (!ctx.hasUI) {
-			if (hit.severity === "risky") return undefined;
-			return {
-				block: true,
-				reason: `[${label}] ${hit.reason} (no UI, auto-blocked)`,
-			};
+		// Path concerns
+		const candidates = extractPathsFromBash(command);
+		for (const p of candidates) {
+			const hit = classifyPath(p, "read", pathRules);
+			if (!hit) continue;
+			if (hit.severity === "info") {
+				ctx.ui.notify(`${PATH_SEVERITY_ICON.info} ${hit.reason}: ${p}`, "info");
+				continue;
+			}
+			concerns.push({
+				icon: PATH_SEVERITY_ICON[hit.severity],
+				label: hit.severity.toUpperCase(),
+				detail: `${hit.reason} — ${p}`,
+				tier: SEVERITY_TIER[hit.severity] ?? 0,
+			});
 		}
 
-		// sudo: hard redirect to sudo_run — no prompt, no bypass.
+		// Command concern
+		const cmdHit = classify(command, rules);
+		if (cmdHit) {
+			concerns.push({
+				icon: SEVERITY_ICON[cmdHit.severity],
+				label: cmdHit.severity.toUpperCase(),
+				detail: cmdHit.reason,
+				tier: SEVERITY_TIER[cmdHit.severity] ?? 0,
+			});
+		}
+
+		if (concerns.length === 0) return undefined;
+
+		const highest = concerns.reduce((a, b) => (a.tier > b.tier ? a : b));
+
+		// sudo: hard redirect — no prompt, no bypass.
 		if (isSudoCommand(command)) {
 			ctx.ui.notify(
 				`⚠️  ${ctx.ui.theme.fg("warning", "DANGEROUS")} — use sudo_run tool instead (handles auth securely)`,
@@ -141,24 +151,54 @@ export default function (pi: ExtensionAPI): void {
 			};
 		}
 
-		const decision = await promptGateDecision(ctx.ui, hit, command);
+		// No UI: auto-block block+ severity, pass anything lower.
+		if (!ctx.hasUI) {
+			if (highest.tier >= SEVERITY_TIER.block) {
+				return {
+					block: true,
+					reason: `[${highest.label}] ${highest.detail} (no UI, auto-blocked)`,
+				};
+			}
+			return undefined;
+		}
+
+		// Single concern → use existing targeted dialog. Multiple → merged.
+		let decision: GateDecision;
+		if (concerns.length === 1 && cmdHit) {
+			decision = await promptGateDecision(ctx.ui, cmdHit, command);
+		} else if (concerns.length === 1 && !cmdHit) {
+			// Single path hit — reuse path dialog
+			const ph = candidates
+				.map((p) => ({ p, h: classifyPath(p, "read", pathRules) }))
+				.find((x) => x.h?.severity !== "info" && x.h);
+			if (ph?.h) {
+				decision = await promptPathDecision(ctx.ui, ph.h, "bash read", ph.p);
+			} else {
+				return undefined;
+			}
+		} else {
+			decision = await promptMergedGateDecision(ctx.ui, concerns, command);
+		}
 
 		if (!decision.approved) {
-			ctx.ui.notify(`${icon} ${decision.reason}: ${hit.reason}`, "warning");
-			return { block: true, reason: `[${label}] ${decision.reason}` };
+			ctx.ui.notify(
+				`${highest.icon} ${decision.reason}: ${highest.detail}`,
+				"warning",
+			);
+			return { block: true, reason: `[${highest.label}] ${decision.reason}` };
 		}
 
 		const severityColor =
-			hit.severity === "critical"
+			highest.tier >= SEVERITY_TIER.block
 				? "error"
-				: hit.severity === "dangerous"
+				: highest.tier >= SEVERITY_TIER.dangerous
 					? "warning"
 					: "accent";
 		ctx.ui.notify(
-			`${icon} ` +
+			`${highest.icon} ` +
 				ctx.ui.theme.fg(
 					severityColor,
-					`Approved ${label.toLowerCase()} command`,
+					`Approved ${highest.label.toLowerCase()} command`,
 				),
 			"info",
 		);
