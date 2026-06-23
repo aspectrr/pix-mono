@@ -23,7 +23,11 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import type { ModelsDevModel } from "@xynogen/pix-data";
-import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
+import {
+	benchScoreColor,
+	lookupBenchmark,
+	lookupModelsDev,
+} from "@xynogen/pix-data";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
@@ -223,15 +227,9 @@ function renderModel(
 	const bench = lookupBenchmark(id);
 	if (bench) {
 		const score = bench.overallScore ?? "?";
-		const scoreColor =
-			bench.overallScore == null
-				? "muted"
-				: bench.overallScore >= 90
-					? "success"
-					: bench.overallScore >= 75
-						? "warning"
-						: "error";
-		out += theme.fg("muted", " · ⚡") + theme.fg(scoreColor, `${score}`);
+		out +=
+			theme.fg("muted", " · ⚡") +
+			theme.fg(benchScoreColor(bench.overallScore), `${score}`);
 	}
 	return out;
 }

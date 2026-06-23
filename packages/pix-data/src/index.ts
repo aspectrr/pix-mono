@@ -20,6 +20,7 @@ export type {
 // Consumers (pix-core, pix-9router, …) import these instead of duplicating
 // the DataSource implementation and models.dev/BenchLM lookups.
 export {
+	benchScoreColor,
 	buildModelsDevIndex,
 	CACHE_DIR,
 	DataSource,

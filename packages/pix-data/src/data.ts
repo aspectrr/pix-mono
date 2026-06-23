@@ -466,6 +466,16 @@ function buildBenchIndex(): Map<string, BenchmarkEntry> {
 	return index;
 }
 
+/** Map a benchmark score (0–100) to a semantic color token. */
+export function benchScoreColor(
+	score: number | null | undefined,
+): "success" | "warning" | "error" | "muted" {
+	if (score == null) return "muted";
+	if (score >= 80) return "success";
+	if (score >= 60) return "warning";
+	return "error";
+}
+
 export function lookupBenchmark(modelName: string): BenchmarkEntry | undefined {
 	return findInIndex(modelName, buildBenchIndex());
 }

@@ -23,7 +23,11 @@ import {
 	Text,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
+import {
+	benchScoreColor,
+	lookupBenchmark,
+	lookupModelsDev,
+} from "@xynogen/pix-data";
 import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
@@ -175,7 +179,9 @@ async function showEnhancedPicker(
 					let rankPrefix: string;
 					if (localRank) {
 						const rankStr = String(localRank).padEnd(maxRankWidth);
-						rankPrefix = mute("#") + theme.fg("warning", rankStr);
+						const rankColor =
+							localRank <= 3 ? "success" : localRank <= 7 ? "warning" : "error";
+						rankPrefix = mute("#") + theme.fg(rankColor, rankStr);
 					} else {
 						rankPrefix = " ".repeat(maxRankWidth + 1);
 					}
@@ -200,6 +206,7 @@ async function showEnhancedPicker(
 					if (bench) {
 						const score = bench.overallScore ?? "?";
 						const s = bench.overallScore;
+						const scoreColor = benchScoreColor(s);
 						let filled = 1;
 						if (typeof s === "number") {
 							if (s >= 90) filled = 5;
@@ -208,9 +215,9 @@ async function showEnhancedPicker(
 							else if (s >= 50) filled = 2;
 						}
 						const starBar =
-							theme.fg("warning", "★".repeat(filled)) +
+							theme.fg(scoreColor, "★".repeat(filled)) +
 							mute("☆".repeat(5 - filled));
-						benchSeg = `⚡${theme.fg("warning", String(score))} ${starBar}`;
+						benchSeg = `⚡${theme.fg(scoreColor, String(score))} ${starBar}`;
 					}
 					const desc = [ctxStr, costSeg, benchSeg].filter(Boolean).join(sep);
 
