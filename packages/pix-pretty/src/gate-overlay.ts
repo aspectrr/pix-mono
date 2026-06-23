@@ -24,7 +24,7 @@ import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type OverlayAction = "approved" | "denied" | "timeout"; // ponytail: timeout kept for back-compat; never emitted now
+export type OverlayAction = "approved" | "denied" | "timeout";
 
 export interface OverlayResult {
 	action: OverlayAction;
@@ -45,7 +45,11 @@ interface BaseConfig {
 	title: string;
 	/** Optional body lines under the title. */
 	body?: string[];
-	/** @deprecated No-op — timeout removed. Dialog waits indefinitely for user input. */
+	/**
+	 * Auto-deny after this many ms of NO user input (dead-man's switch). The
+	 * first keypress cancels the timer and the dialog then waits indefinitely.
+	 * 0 or omitted = no timer (wait forever). Resolves with action "timeout".
+	 */
 	timeoutMs?: number;
 	/**
 	 * Choices shown in the SelectList.
@@ -228,6 +232,18 @@ export function showOverlay(
 				let stage: Stage = "select";
 				let countdownLine: string | undefined;
 
+				// Dead-man's-switch timer: counts down only while untouched. The
+				// first keypress cancels it (user is present → let them decide). If
+				// it expires with no input, auto-deny so the agent isn't stuck.
+				const timeoutMs = config.timeoutMs ?? 0;
+				let remaining = Math.ceil(timeoutMs / 1000);
+				let timer: ReturnType<typeof setInterval> | undefined;
+				const cancelTimer = () => {
+					if (timer) clearInterval(timer);
+					timer = undefined;
+					countdownLine = undefined;
+				};
+
 				// ── components ──────────────────────────────────────────────────
 				const selectItems: SelectItem[] = choices.map((c) => ({
 					value: c.value,
@@ -243,7 +259,24 @@ export function showOverlay(
 				const maskedInput = new MaskedInput();
 
 				// ── finish ───────────────────────────────────────────────────────
-				const finish = (result: OverlayResult) => done(result);
+				const finish = (result: OverlayResult) => {
+					cancelTimer();
+					done(result);
+				};
+
+				// Arm the dead-man's switch (only when a timeout was requested).
+				if (timeoutMs > 0) {
+					countdownLine = theme.fg("dim", `auto-deny in ${remaining}s`);
+					timer = setInterval(() => {
+						remaining -= 1;
+						if (remaining <= 0) {
+							finish({ action: "timeout" });
+							return;
+						}
+						countdownLine = theme.fg("dim", `auto-deny in ${remaining}s`);
+						tui.requestRender();
+					}, 1000);
+				}
 
 				// ── event wiring ─────────────────────────────────────────────────
 				selectList.onSelect = (item) => {
@@ -285,6 +318,7 @@ export function showOverlay(
 					},
 					invalidate: () => {},
 					handleInput: (data) => {
+						cancelTimer(); // user is present — stop the auto-deny countdown
 						if (stage === "select") selectList.handleInput(data);
 						else maskedInput.handleInput(data);
 						tui.requestRender();

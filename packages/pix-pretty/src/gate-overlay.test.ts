@@ -178,3 +178,56 @@ describe("showOverlay — sudo mode", () => {
 		expect(joined).toContain("●");
 	});
 });
+
+// ── Auto-deny timer (dead-man's switch) ───────────────────────────────────────
+//
+// Timer-aware mock: unlike makeUI, this keeps the promise pending and resolves
+// only when `done` fires — so a real setInterval expiry can drive the result.
+// `onReady` gets the live component to optionally feed input before expiry.
+function makeTimerUI(onReady?: (comp: Wired) => void): OverlayUI {
+	return {
+		custom: <T>(
+			cb: (
+				tui: { requestRender(): void },
+				th: typeof theme,
+				kb: unknown,
+				done: (v: T) => void,
+			) => Wired,
+		): Promise<T | undefined> =>
+			new Promise((resolve) => {
+				const comp = cb({ requestRender: () => {} }, theme, undefined, (v) =>
+					resolve(v),
+				);
+				comp.render(80);
+				onReady?.(comp);
+			}),
+	};
+}
+
+describe("showOverlay — auto-deny timer", () => {
+	test("expires to timeout when left untouched", async () => {
+		const result = await showOverlay(makeTimerUI(), {
+			mode: "confirm",
+			title: "T",
+			timeoutMs: 1000, // ceil → 1s, fires on first tick
+		});
+		expect(result.action).toBe("timeout");
+	});
+
+	test("first keypress cancels the timer (no auto-deny)", async () => {
+		let live: Wired | undefined;
+		const pending = showOverlay(
+			makeTimerUI((comp) => {
+				live = comp;
+				comp.handleInput(DOWN); // any key — cancels the dead-man's switch
+			}),
+			{ mode: "confirm", title: "T", timeoutMs: 1000 },
+		);
+		// Wait well past the 1s window. A live timer would have resolved "timeout";
+		// since the keypress cancelled it, the promise is still pending here.
+		await new Promise((r) => setTimeout(r, 1300));
+		live?.handleInput(ENTER); // now deny explicitly
+		const result = await pending;
+		expect(result.action).toBe("denied");
+	});
+});
