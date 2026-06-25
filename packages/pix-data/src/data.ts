@@ -285,6 +285,40 @@ export const modelgrep = new DataSource<ModelGrepModel[]>({
 	empty: [],
 });
 
+// ── BenchLM (fallback coding-score source) ────────────────────────────────────
+// Upstream `benchlm.ai` ships a 0–100 `overallScore` per model with category
+// breakdown (coding/agentic/reasoning/…). Used as a fallback when modelgrep's
+// `benchmarks.artificial_analysis` is null (current state). Same name as
+// before the 4dfb443 swap.
+interface BenchLMCategoryScores {
+	coding?: number | null;
+	agentic?: number | null;
+	reasoning?: number | null;
+}
+
+interface BenchLMRawEntry {
+	rank: number;
+	model: string;
+	creator?: string;
+	overallScore: number | null;
+	categoryScores?: BenchLMCategoryScores;
+}
+
+interface BenchLMResponse {
+	lastUpdated?: string;
+	mode?: string;
+	models?: BenchLMRawEntry[];
+}
+
+export const benchlm = new DataSource<BenchLMRawEntry[]>({
+	label: "benchlm",
+	url: "https://benchlm.ai/api/data/leaderboard",
+	cachePath: join(CACHE_DIR, "benchlm.json"),
+	parse: (raw) => (raw as BenchLMResponse).models ?? [],
+	parseCache: (data) => (data as BenchLMResponse)?.models ?? [],
+	empty: [],
+});
+
 // ── Lookup helpers ─────────────────────────────────────────────────────────────
 
 function normalize(id: string): string {
@@ -443,12 +477,24 @@ function codingScore(
 
 function buildBenchIndex(): Map<string, BenchmarkEntry> {
 	const index = new Map<string, BenchmarkEntry>();
+	// BenchLM lookup table: normalized benchlm name → entry, indexed in source
+	// order (highest score first when ties exist). Built once per call.
+	const benchlmByNorm = new Map<string, BenchLMRawEntry[]>();
+	for (const b of benchlm.getCached()) {
+		const k = normalizeBenchlmName(b.model);
+		if (!k) continue;
+		const arr = benchlmByNorm.get(k) ?? [];
+		arr.push(b);
+		benchlmByNorm.set(k, arr);
+	}
+
 	// Rank by our computed score (desc); unscored sink to the bottom, holding
 	// source order among themselves.
-	const scored = modelgrep.getCached().map((g) => ({
-		g,
-		score: g.benchmarks ? codingScore(g.benchmarks) : null,
-	}));
+	const scored = modelgrep.getCached().map((g) => {
+		const fromAA = g.benchmarks ? codingScore(g.benchmarks) : null;
+		const score = fromAA ?? lookupBenchlmScore(g, benchlmByNorm);
+		return { g, score };
+	});
 	scored.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
 	scored.forEach(({ g, score }, i) => {
 		const slug = slugOf(g.id);
@@ -464,6 +510,55 @@ function buildBenchIndex(): Map<string, BenchmarkEntry> {
 			if (!index.has(k)) index.set(k, entry);
 	});
 	return index;
+}
+
+// Normalize a benchlm `model` field (e.g. "Claude Opus 4.8 (Max)") to a slug
+// comparable to modelgrep ids (e.g. "claude-opus-4-8"). Drops parenthesized
+// variants, lowercases, folds . _ space → -, strips leading/trailing dashes.
+function normalizeBenchlmName(name: string): string {
+	return name
+		.replace(/\s*\([^)]*\)\s*/g, " ") // drop "(Max)", "(High)", etc.
+		.toLowerCase()
+		.replace(/[._\s]+/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-|-$/g, "");
+}
+
+// Try to find a benchlm score for a modelgrep model. Match strategy:
+//   1. exact normalized match of modelgrep slug
+//   2. prefix overlap (claude-opus-4-8 ↔ claude-opus-4-8-thinking) — benchlm
+//      may list a long-form name; prefer the shortest match on tie (base > variants)
+//   3. if multiple benchlm entries match, return the highest score
+function lookupBenchlmScore(
+	g: ModelGrepModel,
+	benchlmByNorm: Map<string, BenchLMRawEntry[]>,
+): number | null {
+	const slug = slugOf(g.id);
+	const norm = normalize(slug);
+
+	// Collect candidates: exact match + prefix matches (either side).
+	const candidates: BenchLMRawEntry[] = [];
+	const direct = benchlmByNorm.get(norm);
+	if (direct) candidates.push(...direct);
+	for (const [key, entries] of benchlmByNorm) {
+		if (key === norm) continue;
+		if (key.startsWith(norm) || norm.startsWith(key))
+			candidates.push(...entries);
+	}
+	if (candidates.length === 0) return null;
+
+	// Best entry = highest overallScore. Sort by score desc, then by slug
+	// length asc (prefer base name over suffix variants on a tie).
+	const best = [...candidates].sort((a, b) => {
+		const sa = a.overallScore ?? -Infinity;
+		const sb = b.overallScore ?? -Infinity;
+		if (sa !== sb) return sb - sa;
+		return (
+			normalizeBenchlmName(a.model).length -
+			normalizeBenchlmName(b.model).length
+		);
+	})[0];
+	return best.overallScore ?? null;
 }
 
 /** Map a benchmark score (0–100) to a semantic color token. */

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+	benchlm,
 	buildModelsDevIndex,
 	lookupBenchmark,
 	lookupInIndex,
@@ -225,5 +226,90 @@ describe("modelgrep adapters", () => {
 
 	it("lookupBenchmark returns undefined for unknown model", () => {
 		expect(lookupBenchmark("nonexistent-model-xyz")).toBeUndefined();
+	});
+});
+
+// ── benchlm fallback (modelgrep AA null → benchlm) ────────────────────────────
+
+describe("benchlm fallback", () => {
+	// modelgrep catalog: every model has null benchmarks (real-world shape today)
+	const catalog: ModelGrepModel[] = [
+		mg("anthropic/claude-opus-4-8", { name: "Claude Opus 4.8" }),
+		mg("minimax/minimax-m3", { name: "MiniMax M3" }),
+		mg("deepseek/deepseek-v4-pro", { name: "DeepSeek V4 Pro" }),
+		mg("qwen/qwen3.7-max", { name: "Qwen3.7 Max" }),
+		mg("ghost/uncataloged", { name: "Ghost" }), // not in benchlm either
+	];
+	// benchlm: real shape (no benchmarks field, just overallScore 0-100)
+	const benchlmEntries = [
+		{ rank: 1, model: "Claude Opus 4.8 (Max)", overallScore: 95 },
+		{ rank: 2, model: "Claude Opus 4.8", overallScore: 93 },
+		{ rank: 25, model: "MiniMax M3", overallScore: 78 },
+		{ rank: 39, model: "DeepSeek V4 Pro", overallScore: 68 },
+		{ rank: 10, model: "Qwen3.7 Max", overallScore: 90 },
+	];
+
+	beforeEach(() => {
+		(modelgrep as unknown as { _mem: ModelGrepModel[] })._mem = catalog;
+		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem =
+			benchlmEntries;
+	});
+	afterEach(() => {
+		(modelgrep as unknown as { _mem: ModelGrepModel[] | null })._mem = null;
+		(benchlm as unknown as { _mem: typeof benchlmEntries | null })._mem = null;
+	});
+
+	it("falls back to benchlm when modelgrep benchmarks are null", () => {
+		const b = lookupBenchmark("claude-opus-4-8");
+		// Two candidates: (Max)=95, base=93 → pick higher
+		expect(b?.overallScore).toBe(95);
+	});
+
+	it("prefers the higher-scoring benchlm variant when multiple match", () => {
+		const b = lookupBenchmark("minimax-m3");
+		expect(b?.overallScore).toBe(78);
+	});
+
+	it("returns null when both modelgrep and benchlm lack the model", () => {
+		const b = lookupBenchmark("uncataloged");
+		expect(b?.overallScore).toBeNull();
+	});
+
+	it("ranks scored models above unscored when only some have benchlm data", () => {
+		// catalog has 5 models, 4 in benchlm → uncataloged sinks to last
+		const b = lookupBenchmark("uncataloged");
+		expect(b?.rank).toBe(5); // 4 scored + 1 unscored at bottom
+	});
+
+	it("normalizes dots and parens: qwen3.7-max ↔ Qwen3.7 Max", () => {
+		const b = lookupBenchmark("qwen3.7-max");
+		expect(b?.overallScore).toBe(90);
+	});
+});
+
+describe("modelgrep AA primary wins over benchlm", () => {
+	const catalog: ModelGrepModel[] = [
+		mg("anthropic/claude-opus-4-8", {
+			bench: { intelligence: 60 }, // AA index: 60/65 → 92
+		}),
+	];
+	const benchlmEntries = [
+		{ rank: 1, model: "Claude Opus 4.8", overallScore: 50 },
+	];
+
+	beforeEach(() => {
+		(modelgrep as unknown as { _mem: ModelGrepModel[] })._mem = catalog;
+		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem =
+			benchlmEntries;
+	});
+	afterEach(() => {
+		(modelgrep as unknown as { _mem: ModelGrepModel[] | null })._mem = null;
+		(benchlm as unknown as { _mem: typeof benchlmEntries | null })._mem = null;
+	});
+
+	it("uses AA intelligence when present, ignores benchlm", () => {
+		const b = lookupBenchmark("claude-opus-4-8");
+		// 60/65 * 100 = 92.23 → 92, not benchlm's 50
+		expect(b?.overallScore).toBe(92);
 	});
 });

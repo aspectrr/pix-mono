@@ -8,7 +8,7 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { modelgrep } from "./data.ts";
+import { benchlm, modelgrep } from "./data.ts";
 
 export type {
 	BenchmarkEntry,
@@ -20,6 +20,7 @@ export type {
 // Consumers (pix-core, pix-9router, …) import these instead of duplicating
 // the DataSource implementation and models.dev/BenchLM lookups.
 export {
+	benchlm,
 	benchScoreColor,
 	buildModelsDevIndex,
 	CACHE_DIR,
@@ -33,4 +34,5 @@ export {
 
 export default function (_pi: ExtensionAPI): void {
 	void modelgrep.get();
+	void benchlm.get();
 }
