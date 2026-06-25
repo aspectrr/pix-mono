@@ -69,13 +69,28 @@ export type SortableModel = {
 	id: string;
 	name?: string;
 	score?: number | null;
+	/**
+	 * Sort tier. Lower = earlier. Default 0.
+	 *  0 = scored (sort by `score` desc)
+	 *  1 = benched but unscored (sort by name, between scored and off-catalog)
+	 *  2 = off-catalog (no bench entry at all → always last)
+	 * The off-catalog tier exists for models like `openrouter/owl-alpha` that
+	 * are present in the router but missing from every benchmark source —
+	 * they should never interleave with the benched-but-unscored tail.
+	 */
+	tier?: number;
 };
 
 export function sortModels<T extends SortableModel>(models: T[]): T[] {
 	return [...models].sort((a, b) => {
-		const sa = a.score ?? -1;
-		const sb = b.score ?? -1;
-		if (sa !== sb) return sb - sa;
+		const ta = a.tier ?? 0;
+		const tb = b.tier ?? 0;
+		if (ta !== tb) return ta - tb;
+		if (ta === 0) {
+			const sa = a.score ?? -1;
+			const sb = b.score ?? -1;
+			if (sa !== sb) return sb - sa;
+		}
 		return (a.name ?? a.id).localeCompare(b.name ?? b.id);
 	});
 }
@@ -119,19 +134,35 @@ async function showEnhancedPicker(
 		bench: ReturnType<typeof lookupBenchmark>;
 		// Rank among the user's *available* models, not the global catalog.
 		localRank: number | null;
+		// Sort tier: 0 scored, 1 benched-but-unscored, 2 off-catalog.
+		tier: 0 | 1 | 2;
 	};
-	const rows: Row[] = available.map((m) => ({
-		m,
-		dev: lookupModelsDev(m.provider, m.id),
-		bench: lookupBenchmark(m.id),
-		localRank: null,
-	}));
+	const rows: Row[] = available.map((m) => {
+		const bench = lookupBenchmark(m.id);
+		const tier = !bench
+			? 2 // off-catalog → absolute bottom (no rank)
+			: bench.overallScore == null
+				? 1 // benched, unscored → middle
+				: 0; // scored → top
+		return {
+			m,
+			dev: lookupModelsDev(m.provider, m.id),
+			bench,
+			localRank: null,
+			tier,
+		};
+	});
 
-	// Sort: by score desc (highest first), unscored last alphabetical
+	// Mirror sortModels() — score-desc within tier 0, name-asc otherwise.
 	rows.sort((a, b) => {
-		const sa = a.bench?.overallScore ?? -1;
-		const sb = b.bench?.overallScore ?? -1;
-		if (sa !== sb) return sb - sa;
+		const ta = a.tier;
+		const tb = b.tier;
+		if (ta !== tb) return ta - tb;
+		if (ta === 0) {
+			const sa = a.bench?.overallScore ?? -1;
+			const sb = b.bench?.overallScore ?? -1;
+			if (sa !== sb) return sb - sa;
+		}
 		return (a.m.name ?? a.m.id).localeCompare(b.m.name ?? b.m.id);
 	});
 
@@ -171,7 +202,10 @@ async function showEnhancedPicker(
 					const isCurrent =
 						current && m.provider === current.provider && m.id === current.id;
 
-					// Label: marker + muted '#' + bright rank + accent-colored model name
+					// Label: marker + rank cell + accent-colored model name.
+					// Ranked models show muted '#' + colored rank. Unranked (no
+					// modelgrep entry) show a muted em-dash sized to the rank
+					// column, so the model name aligns across rows.
 					const marker = isCurrent ? theme.fg(accent, "▶") : " ";
 					let rankPrefix: string;
 					if (localRank) {
@@ -181,7 +215,9 @@ async function showEnhancedPicker(
 						const rankColor = benchScoreColor(bench?.overallScore);
 						rankPrefix = mute("#") + theme.fg(rankColor, rankStr);
 					} else {
-						rankPrefix = " ".repeat(maxRankWidth + 1);
+						// Width = "#" + maxRankWidth chars (e.g. "#   " or "#——" for 2-digit ranks).
+						const dash = "—".padEnd(maxRankWidth, " ");
+						rankPrefix = mute("#") + mute(dash);
 					}
 					// Display model id only; m.provider is routing provider, not part of id.
 					const idColored = theme.fg(accent, m.id);

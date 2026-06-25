@@ -92,4 +92,36 @@ describe("sortModels", () => {
 		sortModels(models);
 		expect(models).toEqual(original);
 	});
+
+	it("puts null score models after all scored models regardless of source order", () => {
+		const shuffled = [
+			{ provider: "a", id: "m1", name: "Zeta", score: null },
+			{ provider: "a", id: "m2", name: "Beta", score: 80 },
+			{ provider: "a", id: "m3", name: "Alpha", score: 95 },
+			{ provider: "a", id: "m4", name: "Gamma", score: null },
+			{ provider: "a", id: "m5", name: "Delta", score: 60 },
+		];
+		const sorted = sortModels(shuffled);
+		const lastTwo = sorted.slice(-2).map((m) => m.name);
+		expect(lastTwo).toEqual(["Gamma", "Zeta"]); // nulls last, stable within
+	});
+
+	it("sinks tier 2 (off-catalog) below tier 1 (benched-but-unscored)", () => {
+		// Mirrors the openrouter/owl-alpha bug: a model with no bench entry at
+		// all must not interleave with benched models that happen to have a
+		// null score.
+		const mixed = [
+			{ provider: "a", id: "m1", name: "Alpha", score: 95, tier: 0 },
+			{ provider: "a", id: "m2", name: "Beta", score: null, tier: 1 },
+			{ provider: "a", id: "m3", name: "Gamma", score: undefined, tier: 2 },
+			{ provider: "a", id: "m4", name: "Delta", score: 60, tier: 0 },
+		];
+		const sorted = sortModels(mixed);
+		expect(sorted.map((m) => m.name)).toEqual([
+			"Alpha",
+			"Delta",
+			"Beta",
+			"Gamma",
+		]);
+	});
 });
