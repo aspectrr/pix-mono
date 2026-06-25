@@ -4,7 +4,7 @@ Pi extension — `/update` self-update command.
 
 ## What it does
 
-Registers a `/update` slash command that updates Pi and its installed extensions in place. Detects the Pi install method (Volta, Bun, npm, Homebrew, or native package manager) and runs the appropriate upgrade command. Handles transient errors (rate limits, timeouts, network failures) with a retry loop, distinguishing them from hard failures. After updating Pi, it also refreshes all installed extensions. The command reports progress live in the TUI and notifies you to restart Pi when the update completes.
+Registers a `/update` slash command that updates Pi and refreshes all installed `@xynogen/pix-*` extensions. Detects the Pi install method (Vite-Plus `vp`, Bun, npm, Homebrew, or native) and runs the appropriate upgrade command with a retry loop that distinguishes transient errors (rate limits, timeouts, network failures) from hard failures. After updating Pi, runs `pi update --extensions` to refresh extensions from npm. The command shows a progress overlay, confirms the action upfront, and closes Pi at the end so the next launch picks up the new binaries.
 
 ## Install
 

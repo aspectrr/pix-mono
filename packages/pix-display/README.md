@@ -6,7 +6,7 @@ Pi core extension — paste chip rendering and thinking block display.
 
 Two features, always on when installed:
 
-**Paste chips.** Replaces Pi's paste markers (`[paste #1 2232 chars]`) with styled icon chips (`text 2.2k chars` for text, `image #1` for images). Collapses pasted image paths into markers in the buffer while showing human-readable labels on screen. The display rewrite is purely visual — the buffer keeps the real path for the model.
+**Paste chips.** Replaces Pi's paste markers (`[paste #1 2232 chars]`) with styled icon chips: `image #1` for image pastes (blue), `text +N lines` / `text Nk chars` for text pastes (green). Collapses pasted image paths into markers in the buffer while showing human-readable labels on screen. The display rewrite is purely visual — the buffer keeps the real path for the model. Expansion wraps each paste in `<paste>…</paste>` so adjacent pastes don't merge into one wall in the model-facing text.
 
 **Thinking blocks.** Converts leaked reasoning tags (`<think>`/`<thinking>`) from some providers into native Pi `thinking` content blocks, which render dim + italic via the `thinkingText` theme token. No ANSI injection, no markdown blockquote shim. Applies during streaming (`message_update`) and finalization (`message_end`).
 

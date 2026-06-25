@@ -20,8 +20,9 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 | `pix-update` | `/update` — self-update Pi + refresh extensions |
 | `pix-commands` | Slash commands — `/clear`; more on the way |
 | `pix-diagnostics` | Compact LSP diagnostic widget |
+| `pix-display` | Paste chip rendering + thinking block display |
 | `pix-prompts` | System-prompt injection (AGENTS.md + repo directive files) |
-| `pix-skills` | Agent skill loader (`read_skills` tool + 28 bundled skills) |
+| `pix-skills` | Agent skill loader (`read_skills` tool + 29 bundled skills) |
 | `pix-nudge` | Tool + capability nudge hooks |
 
 **Tool suite** (drop-in replacements for Pi's built-in tools)
@@ -38,10 +39,11 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 | `pix-todo` | `todo` — durable execution checklist |
 | `pix-ask` | `ask_user` — structured TUI questionnaire |
 
-**Behaviour**
+**Shared data + behaviour**
 
 | Package | Description |
 |---|---|
+| `pix-data` | Shared model data layer (models.dev + BenchLM) cached at `~/.cache/pi` |
 | `pix-optimizer` | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
 | `pix-gate` | Permission gate for dangerous bash commands |
 | `pix-subagent` | `agent` / `agent_result` / `agent_steer` — planner-driven sub-agents with live widget |

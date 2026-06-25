@@ -1,10 +1,10 @@
 # pix-diagnostics
 
-Pi extension — lightweight LSP diagnostic widget.
+Pi extension — lightweight file-touched widget.
 
 ## What it does
 
-Registers a compact LSP diagnostic widget using the `pi-lens` widget id, overriding the external pi-lens package when both are installed. The header line shows total error and warning counts across recently-touched files (e.g. `●4E !1W`). Expanding the widget reveals up to 3 diagnostics with file path, line number, and message; a `+N more` line is appended when the total exceeds 3. File records are tracked per session and pruned automatically.
+Registers a compact widget using the `pi-lens` widget id, overriding the external pi-lens package when both are installed. The widget tracks files touched in the current session via `write` and `edit` tool results and renders a single line showing the up-to-3 most recently-touched file basenames with a `+N more` suffix when more exist, plus a hint to run `/lens-booboo` for full details. The widget does not currently query live LSP diagnostics (that requires a full LSP client) — the file list is the placeholder, intended to be filled by LSP integration in a future version. Widget state is per-session and cleared on `session_shutdown`.
 
 ## Install
 

@@ -1,38 +1,39 @@
 # pix-pretty
 
-Complete rendering and formatting solution for Pi Coding Agent with syntax highlighting, file icons, tree views, FFF search, paste chip formatting, and reasoning tag cleanup.
+Rendering and formatting library for Pi Coding Agent with syntax highlighting, file icons, tree views, FFF search integration, and gate-dialog overlay.
 
-## Features
+## What it does
 
-### Tool Output Rendering
+This package is a **library + a small extension** that other pix packages
+consume. It does not register user-facing tools itself — the tool renderers
+(`pix-read`, `pix-bash`, `pix-ls`, `pix-find`, `pix-grep`, `pix-edit`,
+`pix-write`) import from it. The extension entry point (`src/index.ts`) only
+initializes the syntax-highlight theme from Pi settings, clears the highlight
+cache, and registers two FFF slash commands (`/fff-health`, `/fff-rescan`)
+once `pix-grep` has brought the FFF finder online.
 
-- **Syntax highlighting** - Uses `cli-highlight` (highlight.js-backed) for code blocks
-- **File icons** - Visual file type indicators in ls/find output
-- **Tree views** - Hierarchical directory display
-- **FFF search** - Fast full-text search integration with `@ff-labs/fff-node`
-- **Diff rendering** - Enhanced git diff and edit/write tool output
-- **Image metadata** - Display image dimensions and format info
-- **Bash exit summary** - Command status and timing info
+### Rendering
 
-### Paste Chip Formatting
+- **Syntax highlighting** — `cli-highlight` (highlight.js-backed)
+- **File icons** — type-aware icons in ls/find output
+- **Tree views** — hierarchical directory display for ls
+- **Diff rendering** — side-by-side split diff for edit/write
+- **Bash exit summary** — colored status, line count, truncation notice
 
-- **Image path collapsing** - Converts `/tmp/pi-clipboard-abc.png` → `[paste image #1]`
-- **Text paste markers** - Long pasted text → `[paste text +42 lines]`
-- **Atomic deletion** - Delete entire paste markers as single units
-- **Type-aware labels** - Visual distinction between image and text pastes
+### Shared overlay
 
-### Permission Dialog Overlay
+- **Gate overlay** (`./gate-overlay`) — the one permission-dialog component
+  shared by `pix-gate` and `pix-sudo`. Two modes: `confirm` (SelectList) and
+  `sudo` (SelectList + masked password). Returns
+  `{ action: "approved" | "denied" | "timeout", password? }`. Padded with
+  `Box` `paddingX=2`, `paddingY=1`. The simpler `./confirm` export is the
+  plain boolean Yes/No dialog.
 
-- **Shared gate overlay** - `showOverlay(ui, config)` (export `./gate-overlay`) is the one permission-dialog component used by both `pix-gate` and `pix-sudo`. Two modes: `mode:"confirm"` shows a SelectList only; `mode:"sudo"` shows a SelectList then a masked password stage. Returns `{ action: "approved" | "denied" | "timeout", password? }`. All dialogs are padded (`Box` `paddingX=2`, `paddingY=1`). The simpler `./confirm` export stays for plain boolean Yes/No prompts — `gate-overlay` is its richer multi-choice, password-capable sibling.
+UI features that used to live here have moved to [`pix-display`](packages/pix-display):
+paste chip rendering and reasoning-tag (`<think>`/`<thinking>`) → native
+`thinking` content blocks.
 
-### Reasoning Tag Rendering
-
-- **Live streaming** - Splits `<think>`/`<thinking>` regions into native Pi `thinking` content blocks token-by-token during streaming
-- **Finalized cleanup** - On `message_end`, re-splits every affected text block for persistence (the finalized message bypasses the live rebuild)
-- **Partial-tag safety** - Strips trailing half-streamed tags (e.g. `<thin`) so they never flash as literal text
-- **Visual distinction** - Uses Pi's native `thinking` block rendering (dim + italic via `thinkingText` theme token) — no ANSI injection, no markdown blockquote shim
-
-## Installation
+## Install
 
 ```bash
 pi install npm:@xynogen/pix-pretty
@@ -42,40 +43,38 @@ pi install npm:@xynogen/pix-pretty
 
 ### Environment Variables
 
-**Tool rendering:**
+- `PRETTY_THEME` — color theme for syntax highlighting
+- `PRETTY_MAX_HL_CHARS` — max characters to highlight (default: 80000)
+- `PRETTY_MAX_PREVIEW_LINES` — max lines in preview output
+- `PRETTY_CACHE_LIMIT` — FFF cache size limit
+- `PRETTY_ICONS` — icon mode (`nerd` or `none`)
+- `PRETTY_MAX_RENDER_LINES` — max lines in edit/write diff render (default: 150)
+- `PRETTY_FFF_DIR` — override FFF state dir (default: `~/.cache/pi/fff`)
 
-- `PRETTY_THEME` - Color theme for syntax highlighting
-- `PRETTY_MAX_HL_CHARS` - Max characters to highlight (default: 80000)
-- `PRETTY_MAX_PREVIEW_LINES` - Max lines in preview output
-- `PRETTY_CACHE_LIMIT` - FFF cache size limit
-- `PRETTY_ICONS` - Enable/disable file icons
-- `PRETTY_DISABLE_TOOLS` - Comma-separated list of tools to skip rendering
-- `PRETTY_IMAGE_PROTOCOL` - Protocol for image display (tmux passthrough)
-- `PRETTY_FFF_DIR` - Override FFF state dir (default: `~/.cache/pi/fff`)
+## Public exports
 
-## Architecture
+The package exposes its sub-modules via `exports`:
 
-This package combines two rendering systems:
-
-1. **Theme + FFF commands** (`src/index.ts`) - Initialises syntax-highlight theme from Pi settings, clears highlight cache, and registers FFF slash commands. Tool renderers live in the standalone `pix-{read,bash,ls,find,grep,edit,write}` packages — each self-registers via its own Pi extension entry point.
-2. **Paste chip formatting** (`src/paste-chips.ts`) - Custom editor component for paste markers.
-3. **Reasoning tag rendering** (`src/thinking.ts`) - Converts leaked `<think>`/`<thinking>` tags into native Pi `thinking` content blocks (dim + italic via `thinkingText` theme token).
-
-Both work independently but complement each other for a cohesive visual experience.
-
-## Origin
-
-Tool rendering replaced `npm:@heyhuynhgiabuu/pi-pretty` (which was previously replaced by `npm:@heyhuynhgiabuu/pi-diff`). This package is a clean reimplementation — no code was copied directly. Developed independently; changes are not submitted back and upstream changes are not pulled in.
-
-Key divergences from upstream:
-
-1. **Highlight engine: shiki → cli-highlight** - Simpler, no WASM, synchronous
-2. **FFF state dir** - `~/.pi/agent/pi-pretty/fff` → `~/.cache/pi/fff` (XDG cache)
-3. **Split diff view for edit/write tools** - Full side-by-side diff with gutter, line numbers, syntax highlighting
-4. **Paste chip formatting** - Custom editor component for Pi's paste marker system (not in upstream)
-5. **Reasoning tag rendering** - Converts leaked `<think>`/`<thinking>` tags into native Pi `thinking` content blocks (not in upstream)
-
-Paste chip formatting and reasoning tag rendering are original additions with no upstream equivalent.
+```
+@xynogen/pix-pretty            (default — extension entry)
+@xynogen/pix-pretty/ansi
+@xynogen/pix-pretty/confirm
+@xynogen/pix-pretty/progress
+@xynogen/pix-pretty/config
+@xynogen/pix-pretty/diff
+@xynogen/pix-pretty/diff-render
+@xynogen/pix-pretty/highlight
+@xynogen/pix-pretty/lang
+@xynogen/pix-pretty/icons
+@xynogen/pix-pretty/renderers
+@xynogen/pix-pretty/fff
+@xynogen/pix-pretty/types
+@xynogen/pix-pretty/utils
+@xynogen/pix-pretty/resize
+@xynogen/pix-pretty/context
+@xynogen/pix-pretty/gate-overlay
+@xynogen/pix-pretty/modal-frame
+```
 
 ## Full distro
 

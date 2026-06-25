@@ -4,7 +4,7 @@ Pi tool — directory listing with tree view.
 
 ## What it does
 
-Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered as an indented tree with file icons, size annotations, and entry counts per directory. Call labels show the target path inline. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
+Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered as an indented tree with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
 
 ## Install
 

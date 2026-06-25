@@ -1,7 +1,7 @@
 # pix-optimizer
 
-Token-optimization suite for Pi Coding Agent. Three tools wired into one
-extension via `src/index.ts`, fronted by a single `/opt` command and one
+Token-optimization suite for Pi Coding Agent. Four tools wired into one
+extension via `src/index.ts`, fronted by a single `/optimizer` command and one
 shared status-bar cell:
 
 - **Caveman** (`󰜐`) — terse-output system prompt
@@ -11,15 +11,17 @@ shared status-bar cell:
 
 ## Command
 
-One command routes to every tool:
+One command opens an interactive overlay that fronts every tool:
 
 ```text
-/opt                  → status + help
-/opt caveman <level>  → set caveman level (1/2/3/lite/full/ultra/micro/off/config)
-/opt rtk [on|off]     → toggle RTK rewriting
-/opt toon [on|off]    → toggle jq+TOON guidance
-/opt ponytail <level> → set ponytail level (1/2/3/lite/full/ultra/off/config)
+/optimizer                 → open the overlay (←→ cycle value, ↑↓ move, esc close)
 ```
+
+There is no text-arg form: the overlay is the only UI. Selecting a value calls
+the tool's `run()` handler, which persists the new value and repaints the
+shared status cell. Headless/test fallbacks print a plain status summary.
+
+State persists to `~/.pi/agent/optimizer.json` (caveman/rtk/toon/ponytail).
 
 ## Status bar
 
@@ -32,15 +34,15 @@ coded by state: **accent** when the tool is enabled, **dim** when disabled.
 
 Cuts ~75% of output tokens while keeping full technical accuracy.
 
-| # | Name  | Description                  |
-|---|-------|------------------------------|
-| 1 | lite  | Professional, no fluff       |
-| 2 | full  | Classic caveman              |
-| 3 | ultra | Maximum compression          |
-| – | micro | Experimental prompt-minimized |
+| Level | Description                  |
+|-------|------------------------------|
+| lite  | Professional, no fluff       |
+| full  | Classic caveman              |
+| ultra | Maximum compression          |
+| micro | Experimental prompt-minimized |
 
-`/opt caveman config` opens a settings dialog. Default level for new sessions
-and status-bar visibility are saved to `~/.pi/agent/caveman.json`.
+The `/optimizer` overlay opens a settings dialog when needed. Default level
+for new sessions is restored from `~/.pi/agent/optimizer.json`.
 
 ### RTK Tool Rewriting (`󰓥`)
 
@@ -88,14 +90,11 @@ writing code the agent stops at the first rung that holds: does this need to
 exist → stdlib → native platform → installed dep → one line → minimum that
 works. Validation, error handling, security, and accessibility are never cut.
 
-| # | Name  | Description                          |
-|---|-------|--------------------------------------|
-| 1 | lite  | Name the lazier alternative, you pick |
-| 2 | full  | The ladder enforced (default)        |
-| 3 | ultra | YAGNI extremist                      |
-
-`/opt ponytail config` opens a settings dialog. Default level for new sessions
-and status-bar visibility are saved to `~/.pi/agent/ponytail.json`.
+| Level | Description                          |
+|-------|--------------------------------------|
+| lite  | Name the lazier alternative, you pick |
+| full  | The ladder enforced (default)        |
+| ultra | YAGNI extremist                      |
 
 **No install required** — pure prompt injection, no external binary or PATH
 dependency (unlike RTK and TOON).
@@ -116,16 +115,18 @@ pi install npm:@xynogen/pix-optimizer
 
 | File              | Role                                                      |
 |-------------------|-----------------------------------------------------------|
-| `src/index.ts`    | Wires the four tools + shared status, registers `/opt`    |
-| `src/opt.ts`      | The `/opt` router: parse, complete, dispatch              |
+| `src/index.ts`    | Wires the four tools + shared status, registers `/optimizer` |
+| `src/opt.ts`      | The `/optimizer` overlay UI (keyboard nav + cycling)     |
 | `src/status.ts`   | Shared status-bar cell + `OptimizerHandle` contract       |
-| `src/caveman.ts`  | Caveman logic, levels, prompt, settings dialog            |
+| `src/caveman.ts`  | Caveman logic, levels, prompt                            |
 | `src/rtk.ts`      | RTK prompt + bash command rewriting                       |
 | `src/json.ts`     | jq+TOON guidance, heuristics, system-prompt injection     |
-| `src/ponytail.ts` | Ponytail logic, levels, prompt, settings dialog           |
+| `src/ponytail.ts` | Ponytail logic, levels, prompt                            |
+| `src/persist.ts`  | Disk-backed `~/.pi/agent/optimizer.json` persistence      |
+| `src/tool-result-filter.ts` | Strips model-guidance warnings from tool_result |
 
 Each tool registers its own lifecycle hooks and exposes an `OptimizerHandle`
-that `/opt` dispatches to. All four share one `OptimizerStatus`.
+that `/optimizer` dispatches to. All four share one `OptimizerStatus`.
 
 ## Development
 
@@ -137,22 +138,22 @@ bun test
 
 This package was built by merging two upstream Pi community packages:
 
-- **Caveman mode** — merged from [`git:github.com/jonjonrankin/pi-caveman`](https://github.com/jonjonrankin/pi-caveman)
-  (itself a fork of `npm:pi-caveman`). Reimplemented here with multiple compression levels,
-  a settings dialog, per-session persistence, and integration with the shared `/opt` command.
+- **Caveman mode** — merged from `npm:pi-caveman`. Reimplemented here with
+  multiple compression levels and integration with the shared `/optimizer`
+  command.
 
-- **RTK rewriting** — merged from `npm:pi-rtk-optimizer`. Reimplemented here with a two-layer
-  approach: prompt injection + live bash command rewriting that handles chained commands
-  (`&&`, `||`, `;`, `|`).
+- **RTK rewriting** — merged from `npm:pi-rtk-optimizer`. Reimplemented here
+  with a two-layer approach: prompt injection + live bash command rewriting
+  that handles chained commands (`&&`, `||`, `;`, `|`).
 
 - **Ponytail mode** — ruleset adapted from [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail),
-  the "lazy senior dev" skill. Reimplemented here as a native `/opt` tool with three intensity
-  levels, a settings dialog, and per-session persistence — no external hooks or files. The
+  the "lazy senior dev" skill. Reimplemented here as a native `/optimizer`
+  tool with three intensity levels — no external hooks or files. The
   ruleset (the YAGNI ladder + safety carve-outs) is rewritten as a system-prompt fragment.
 
 All upstreams are MIT licensed. No codebase was copied directly — the logic was
-rewritten and combined into a single extension with a unified `/opt` command and shared status bar.
-This package does not sync back to any upstream.
+rewritten and combined into a single extension with a unified `/optimizer`
+command and shared status bar. This package does not sync back to any upstream.
 
 ## Full distro
 

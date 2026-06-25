@@ -1,42 +1,57 @@
 # pix-data
 
-Pi coding agent extension — shared model data layer. Fetches and caches the
-[modelgrep](https://modelgrep.com) model catalog to `~/.cache/pi/` on session
-start, so other extensions (model picker, footer, subagent resolver) can read
-context window, pricing, and a coding-focused score/rank synchronously without
-redundant network calls.
+Pi coding agent extension — shared model data layer. Warms two cached
+data sources on session start so other extensions (model picker, footer,
+subagent resolver) can read context window, pricing, and a coding-focused
+score/rank synchronously without redundant network calls:
 
-## Data source
+- **[modelgrep](https://modelgrep.com)** — the model catalog (context window,
+  pricing, modalities, capabilities, raw benchmark fields) used as the
+  authoritative source when present.
+- **[benchlm.ai](https://benchlm.ai)** — a leaderboard of 0–100 coding scores
+  used as a fallback when modelgrep's `artificial_analysis` block is null
+  (currently the common case for the long tail of models).
 
-All data comes from a **single source**: [modelgrep.com](https://modelgrep.com)
-(`/api/v1/models?benchmarked=1&sort=coding`). Free, no API key, ~190 benchmarked
-models with real model ids. modelgrep aggregates benchmark numbers from
-[Artificial Analysis](https://artificialanalysis.ai).
+Both caches live under `~/.cache/pi/` and are shared across every Pi
+extension using the same `DataSource` class — whichever extension loads
+first populates the cache; subsequent extensions read from disk.
 
-- **Context window + pricing** — taken verbatim from modelgrep.
-- **Score** — computed locally from the raw benchmark fields (see below).
-- **Rank** — the model's position once the whole catalog is sorted by that score
-  (best = `#1`). Unscored models sink to the bottom.
+## Data sources
 
-Cached 24h → `~/.cache/pi/modelgrep.json`. On outage the stale cache keeps the
-picker working until it can refresh.
+- **`modelgrep`** — `GET /api/v1/models?sort=coding&order=desc&limit=200`,
+  paginated up to 10 pages (`meta.has_more` / `next_offset`). Free, no API key.
+  modelgrep aggregates benchmark numbers from
+  [Artificial Analysis](https://artificialanalysis.ai). Context window, pricing,
+  and modalities are taken verbatim from the catalog.
+- **`benchlm`** — `GET https://benchlm.ai/api/data/leaderboard`. Free, no API
+  key. Each entry has an `overallScore` (0–100) used as the fallback score
+  when modelgrep's `artificial_analysis` block is null.
+
+Cache files:
+
+- `~/.cache/pi/modelgrep.json` (TTL 24h)
+- `~/.cache/pi/benchlm.json` (TTL 24h)
+
+On outage the stale cache keeps the picker working until it can refresh.
 
 ## Scoring methodology
 
-**Primary score = [Artificial Analysis Intelligence Index](https://artificialanalysis.ai/methodology/intelligence-benchmarking)**
-when available — AA's authoritative composite of 9 independent evals (agents,
-coding, scientific reasoning, general), already weighted toward agentic work.
-It is rescaled to 0–100 (`intelligence / 65 × 100`; the current leader scores
-~65).
+The score a model receives is the first of the following that succeeds, in
+order:
 
-**Fallback = a coding-and-agentic heuristic** for the ~84% of models AA has not
-index-scored, computed from the raw benchmarks below, then mapped onto the index
-scale by a least-squares line. Both the heuristic weights *and* the line were
-jointly tuned against the index on the models that carry *both* it and the raw
-benches (`index100 ≈ 120.6·heuristic − 10.6`, deduped n=29, R²=0.901,
-leave-one-out RMSE 6.55pt) — a data calibration, not a guessed penalty. The
-picker exists to choose a model *for coding work in an agent*, so the heuristic
-is weighted toward exactly that:
+1. **Primary = [Artificial Analysis Intelligence Index](https://artificialanalysis.ai/methodology/intelligence-benchmarking)**
+   when present on the modelgrep entry — AA's authoritative composite of 9
+   independent evals (agents, coding, scientific reasoning, general), already
+   weighted toward agentic work. Rescaled to 0–100
+   (`intelligence / 65 × 100`; the current leader scores ~65).
+2. **Heuristic** from modelgrep's raw benchmark fields when the AA index is
+   absent. Weighted blend of the same family of evals AA uses, then mapped onto
+   the index scale by a least-squares line. Both the heuristic weights *and*
+   the line were jointly tuned against the index on the models that carry
+   *both* it and the raw benches (`index100 ≈ 120.6·heuristic − 10.6`, deduped
+   n=29, R²=0.901, leave-one-out RMSE 6.55pt) — a data calibration, not a
+   guessed penalty. The picker exists to choose a model *for coding work in an
+   agent*, so the heuristic is weighted toward exactly that:
 
 | bench | range | measures |
 |---|---|---|
@@ -58,6 +73,12 @@ reasoning_score = 0.60·gpqa         + 0.40·hle
 heuristic = 0.30·coding_score + 0.60·agentic_score + 0.10·reasoning_score
 score     = round(clamp₀₁₀₀(120.6·heuristic − 10.6))   // fitted to the index
 ```
+
+3. **benchlm.ai fallback** — if the model exists in benchlm but modelgrep has
+   no AA index and no raw benches, look up the benchlm `overallScore` (0–100)
+   and use it verbatim. Match strategy (in `lookupBenchlmScore`): exact
+   normalized slug, then prefix overlap either way, then take the
+   highest-scoring match on a tie.
 
 **Why a heuristic at all, and why these raw evals only:** the AA Intelligence
 Index *is* the ideal number — but only ~16% of the catalog has it. For the rest
@@ -89,13 +110,15 @@ place if your priorities differ.
 
 | Export | Description |
 |---|---|
-| `modelgrep` | `DataSource<ModelGrepModel[]>` — the catalog. TTL 24h → `~/.cache/pi/modelgrep.json` |
+| `modelgrep` | `DataSource<ModelGrepModel[]>` — the modelgrep catalog. TTL 24h → `~/.cache/pi/modelgrep.json` |
+| `benchlm` | `DataSource<BenchLMRawEntry[]>` — the benchlm.ai leaderboard (fallback scores). TTL 24h → `~/.cache/pi/benchlm.json` |
 | `DataSource` | Generic cached data source class |
 | `CACHE_DIR` | Resolved cache directory (`~/.cache/pi`) |
 | `buildModelsDevIndex` | Build a lookup `Map` from the catalog (context/cost/modalities) |
 | `lookupInIndex` | Fuzzy-match a router model id against an index |
-| `lookupModelsDev` | Sync lookup by provider + id from in-memory cache |
+| `lookupModelsDev` | Sync lookup by id from in-memory cache (joined on slug) |
 | `lookupBenchmark` | Sync lookup a model by id — returns score + rank + pricing |
+| `benchScoreColor` | Map a 0–100 score to a `success`/`warning`/`error`/`muted` token |
 
 ## Install
 
@@ -105,10 +128,11 @@ pi install npm:@xynogen/pix-data
 
 ## How it works
 
-On session start the extension fires a background fetch (`modelgrep.get()`),
-paginating the API until the full benchmarked catalog is retrieved. If the cache
-is fresh the fetch is skipped. The cache file lives in `~/.cache/pi/` — any Pi
-extension using the same `DataSource` shares it automatically.
+On session start the extension fires two non-blocking fetches in parallel
+(`modelgrep.get()` and `benchlm.get()`) — Pi session start is not gated on
+either. If the cache is fresh both fetches are skipped. The cache files live
+in `~/.cache/pi/` — any Pi extension using the same `DataSource` shares them
+automatically.
 
 ## Full distro
 
