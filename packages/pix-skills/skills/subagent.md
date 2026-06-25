@@ -232,6 +232,65 @@ Task: "Add the same new field + validation to 6 independent API handlers."
    across all 6, dedupes if they each inlined it.
 5. **Verify** — full test suite; fix any handler that drifted from the contract.
 
+## Common pitfalls
+
+Five failure modes that look like optimizations but cost you. The meta-pattern
+across all of them: **mechanical wins (faster, cheaper, parallel) only pay when
+the underlying semantic is right.** Optimize the form and you lose the meaning.
+
+### 1. Serial delegation
+
+Spawn one subagent, wait for the result, then spawn the next. The parent stays
+tied up relaying the unit the whole time, so its scarce context/attention was
+spent anyway — *and* the unit ran on a weaker model. You traded the strong
+model's intelligence away and got nothing back, not even less of it spent. The
+only thing serial delegation buys is context isolation, which rarely justifies
+the quality hit. **When it's actually OK:** the unit is genuinely heavy (huge
+file dump, web crawl, massive tool loop) and you need the context back before
+the next step can even be planned. Rare. Otherwise: branch, don't relay.
+
+### 2. Dependency chains
+
+B needs A's output, so you spawn A, wait, spawn B. The units serialize on each
+other's data, collapsing back to serial. Two spawns' wall-clock with two
+spawns' quality cost, no parallelism was ever possible. **Fix:** chain them
+*inside one* subagent (let it do B after A) or do A→B yourself on the
+orchestrator. Don't fan out a chain.
+
+### 3. Vague prompts
+
+"Look at the auth flow and tell me what's wrong." The child has no memory of
+your conversation. It doesn't know which auth flow, what you already tried,
+what "wrong" means in your context, or what shape of answer you want. It
+guesses, and you pay twice — once to spawn, once to re-spawn with a better
+spec. **Fix:** write prompts like you're briefing a smart colleague who just
+walked in cold. Include file paths, line numbers, the shared contract, the
+expected output shape, how to validate locally. The cheap-worker prompt
+contract above (goal / contract / constraints / validation / output) is the
+minimum — more spec, not less, when the model is smaller.
+
+### 4. Trusting the summary blindly
+
+The child returns "done, I fixed the bug." You mark the task done. The
+child's summary describes what it *intended*, not what it *did*. For read-only
+lookups that's fine. For write operations — edits, file creates, command runs
+— the only verification is reading the actual diff. **Fix:** for any subagent
+that wrote or edited, check the diff before reporting work as complete. A
+subagent's "done" is a claim, not a fact.
+
+### 5. Type/model coupling
+
+The agent *type* (Explore, Plan, general-purpose) implies a *model* — usually
+baked into the type's default config. A caller's explicit `model:` gets
+silently discarded because the type's default wins. The parent LLM was told
+"pick a cheap model per call" but the code says "no you can't." The
+principle — **type and model are orthogonal, the caller owns the model** —
+is violated by the implementation, not just unenforced. **Fix:** types set
+tool allowlist + persona only. Model is always caller-decided via `model:`.
+A read-only `Explore` worker is not automatically cheap — you make it cheap
+by passing a cheap-tier model. If you find yourself unable to override a
+type's model, that's a bug in the precedence, not a feature of the type.
+
 ## Cost / efficiency notes
 
 - The win is **decomposition quality**, not raw parallelism. Bad splits create
