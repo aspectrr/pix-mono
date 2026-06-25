@@ -1,7 +1,7 @@
 {
 	"name": "@xynogen/pix-pretty",
 	"version": "1.7.7",
-	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, FFF search, and paste chip formatting",
+	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, diff rendering, and FFF search",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
