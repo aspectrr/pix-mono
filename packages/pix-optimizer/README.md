@@ -4,10 +4,10 @@ Token-optimization suite for Pi Coding Agent. Four tools wired into one
 extension via `src/index.ts`, fronted by a single `/optimizer` command and one
 shared status-bar cell:
 
-- **Caveman** (`󰜐`) — terse-output system prompt
-- **RTK** (`󰓥`) — prefixes shell commands with `rtk` + injects RTK prompt
-- **TOON** (`󰗀`) — jq + TOON guidance for dense JSON (skill lives in pix-skills)
-- **Ponytail** (`󰆐`) — lazy-senior-dev system prompt (minimal code, YAGNI)
+- **Caveman** (`Cv`) — terse-output system prompt
+- **RTK** (`Rk`) — prefixes shell commands with `rtk` + injects RTK prompt
+- **TOON** (`Tn`) — jq + TOON guidance for dense JSON (skill lives in pix-skills)
+- **Ponytail** (`Pt`) — lazy-senior-dev system prompt (minimal code, YAGNI)
 
 ## Command
 
@@ -30,13 +30,13 @@ state: **accent** when the tool is enabled, **dim** when disabled.
 
 ### Icon style (Nerd Font, Unicode, or ASCII)
 
-The default glyphs (`󰜐 󰓥 󰗀 󰆐`) are **Nerd Font** symbols and require a patched
+The default glyphs (Nerd Font PUA codepoints) are **Nerd Font** symbols and require a patched
 font (e.g. MesloLGS NF). Terminals without one render them as missing-glyph
 “tofu” boxes. Two font-independent fallbacks are available:
 
 | Mode | Glyphs | Needs Nerd Font? |
 |---|---|---|
-| `nerd` (default) | `󰜐 󰓥 󰗀 󰆐` | yes |
+| `nerd` (default) | Nerd Font PUA glyphs | yes |
 | `unicode` | `♤ ♡ ♢ ♧` (outline card suits) | no |
 | `ascii` | `Cv Rk Tn Pt` | no |
 
@@ -44,16 +44,12 @@ Switch the style live from the **`/optimizer` overlay** — a fifth `icons` row
 at the bottom cycles `nerd → unicode → ascii` with `←→`; the choice persists to
 `~/.pi/agent/optimizer.json`.
 
-Or set it via env var (a persisted menu choice takes precedence):
-
-```bash
-export OPTIMIZER_ICONS=unicode   # nerd | unicode | ascii
-export PRETTY_ICONS=none         # stack-wide: also maps the cell to ASCII
-```
+Icons follow the **global** `pix-pretty` mode — set via `/pretty` or `PRETTY_ICONS`
+env var. The optimizer no longer has its own toggle.
 
 ## Features
 
-### Caveman Mode (`󰜐`)
+### Caveman Mode (`Cv`)
 
 Cuts ~75% of output tokens while keeping full technical accuracy.
 
@@ -67,7 +63,7 @@ Cuts ~75% of output tokens while keeping full technical accuracy.
 The `/optimizer` overlay opens a settings dialog when needed. Default level
 for new sessions is restored from `~/.pi/agent/optimizer.json`.
 
-### RTK Tool Rewriting (`󰓥`)
+### RTK Tool Rewriting (`Rk`)
 
 Two layers, both active automatically:
 
@@ -88,7 +84,7 @@ Two layers, both active automatically:
 cargo install rtk-ai
 ```
 
-### TOON / JSON Compression (`󰗀`)
+### TOON / JSON Compression (`Tn`)
 
 Guidance for handling information-dense JSON via `jq` (query/reshape) and
 `toon` (compress). The system-prompt nudge is injected **only when the user
@@ -105,7 +101,7 @@ The `toon-json` skill (full workflow + when-NOT-to-use guidance) is bundled in
 npm i -g @toon-format/cli
 ```
 
-### Ponytail Mode (`󰆐`)
+### Ponytail Mode (`Pt`)
 
 "Lazy senior dev" mode. Governs **what** the agent builds (minimal code,
 YAGNI), orthogonal to Caveman which governs **how** it talks — they pair. Before
@@ -140,7 +136,7 @@ pi install npm:@xynogen/pix-optimizer
 |-------------------|-----------------------------------------------------------|
 | `src/index.ts`    | Wires the four tools + shared status, registers `/optimizer` |
 | `src/opt.ts`      | The `/optimizer` overlay UI (keyboard nav + cycling)     |
-| `src/status.ts`   | Shared status-bar cell + `OptimizerHandle` contract       |
+| `src/status.ts`   | Shared status-bar cell (`toolIcon()` → shared `pix-pretty` catalog) |
 | `src/caveman.ts`  | Caveman logic, levels, prompt                            |
 | `src/rtk.ts`      | RTK prompt + bash command rewriting                       |
 | `src/json.ts`     | jq+TOON guidance, heuristics, system-prompt injection     |

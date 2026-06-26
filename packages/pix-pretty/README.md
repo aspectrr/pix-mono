@@ -9,8 +9,9 @@ consume. It does not register user-facing tools itself — the tool renderers
 (`pix-read`, `pix-bash`, `pix-ls`, `pix-find`, `pix-grep`, `pix-edit`,
 `pix-write`) import from it. The extension entry point (`src/index.ts`) only
 initializes the syntax-highlight theme from Pi settings, clears the highlight
-cache, and registers two FFF slash commands (`/fff-health`, `/fff-rescan`)
-once `pix-grep` has brought the FFF finder online.
+cache, registers the `/pretty` icon-style switch, and registers two FFF slash
+commands (`/fff-health`, `/fff-rescan`) once `pix-grep` has brought the FFF
+finder online. (Activated by `pix-core`; not a standalone extension.)
 
 ### Rendering
 
@@ -19,6 +20,25 @@ once `pix-grep` has brought the FFF finder online.
 - **Tree views** — hierarchical directory display for ls
 - **Diff rendering** — side-by-side split diff for edit/write
 - **Bash exit summary** — colored status, line count, truncation notice
+
+### Icon catalog (l10n-style)
+
+Icons are treated like a localization catalog: packages never hardcode glyph
+codepoints — they ask for a **semantic role** and the catalog resolves it
+against one global icon mode. Reskinning, or fixing a missing-glyph (“tofu”)
+problem on terminals without a Nerd Font, becomes a one-file edit here.
+
+- **`./icon-catalog`** — `icon(key)` resolves a semantic key (`"cwd"`,
+  `"model"`, `"paste.image"`, `"opt.caveman"`, …) to a glyph for the active
+  mode. Modes: `nerd` (Nerd Font PUA, default), `unicode` (standard BMP glyphs,
+  no patched font needed), `ascii` (plain letters). Also `iconFor(key, mode)`,
+  `getIconMode()`, `setIconMode()`, `ICON_KEYS`, `ICON_MODES`.
+- **`./icon-persist`** — stores the mode in `~/.pi/agent/pretty.json`;
+  `initIconMode()` applies it on load.
+- **`/pretty`** — the single switch: an overlay that previews each mode's
+  glyphs live and persists the choice. One global knob governs every pix-*
+  package (footer, paste chips, model picker, welcome banner, optimizer cell).
+  Seeded from `PRETTY_ICONS` (`none`/`off` → `ascii`) when no choice is saved.
 
 ### Shared overlay
 
@@ -47,7 +67,9 @@ pi install npm:@xynogen/pix-pretty
 - `PRETTY_MAX_HL_CHARS` — max characters to highlight (default: 80000)
 - `PRETTY_MAX_PREVIEW_LINES` — max lines in preview output
 - `PRETTY_CACHE_LIMIT` — FFF cache size limit
-- `PRETTY_ICONS` — icon mode (`nerd` or `none`)
+- `PRETTY_ICONS` — default icon mode when none is persisted: `nerd` (default),
+  `unicode`, `ascii`, or `none`/`off` (→ `ascii`). Overridden by `/pretty`.
+  Note: this seeds the file-icon helpers AND the semantic icon catalog.
 - `PRETTY_MAX_RENDER_LINES` — max lines in edit/write diff render (default: 150)
 - `PRETTY_FFF_DIR` — override FFF state dir (default: `~/.cache/pi/fff`)
 
@@ -66,6 +88,8 @@ The package exposes its sub-modules via `exports`:
 @xynogen/pix-pretty/highlight
 @xynogen/pix-pretty/lang
 @xynogen/pix-pretty/icons
+@xynogen/pix-pretty/icon-catalog
+@xynogen/pix-pretty/icon-persist
 @xynogen/pix-pretty/renderers
 @xynogen/pix-pretty/fff
 @xynogen/pix-pretty/types

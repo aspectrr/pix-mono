@@ -25,6 +25,7 @@ import {
 	lookupBenchmark,
 	lookupModelsDev,
 } from "@xynogen/pix-data";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
@@ -342,7 +343,10 @@ async function showEnhancedPicker(
 					const mw = modalWidth(w);
 					const inner = mw - 4; // CHROME = 2 border + 2 padding
 					const lines: string[] = [
-						theme.fg(accent, theme.bold("󰈩  Select model")),
+						theme.fg(
+							accent,
+							theme.bold(`${icon("picker.model")}  Select model`),
+						),
 						theme.fg(
 							"dim",
 							"context · pricing · coding rank & score from modelgrep.com",

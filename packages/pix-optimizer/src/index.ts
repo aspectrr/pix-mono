@@ -17,11 +17,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { caveman } from "./caveman.ts";
 import { json } from "./json.ts";
 import { registerOptCommand } from "./opt.ts";
-import { loadIconMode } from "./persist.ts";
 import { ponytail } from "./ponytail.ts";
 import { rtk } from "./rtk.ts";
 import {
-	envIconMode,
 	type OptimizerHandle,
 	OptimizerStatus,
 	type OptimizerTool,
@@ -29,8 +27,8 @@ import {
 import { filterModelWarnings } from "./tool-result-filter.ts";
 
 export default function optimizer(pi: ExtensionAPI) {
-	// Persisted menu choice wins; otherwise fall back to the env default.
-	const status = new OptimizerStatus(loadIconMode() ?? envIconMode());
+	// Icons follow the global pix-pretty mode (set via /pretty); no local state.
+	const status = new OptimizerStatus();
 
 	// Each module registers its own lifecycle hooks and returns a handle the
 	// /optimizer overlay renders + drives.

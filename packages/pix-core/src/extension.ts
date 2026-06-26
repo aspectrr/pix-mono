@@ -27,6 +27,7 @@ import registerLs from "@xynogen/pix-ls/src/extension.ts";
 import registerModels from "@xynogen/pix-models/src/extension.ts";
 import registerNudge from "@xynogen/pix-nudge/src/extension.ts";
 import registerOptimizer from "@xynogen/pix-optimizer/src/index.ts";
+import registerPretty from "@xynogen/pix-pretty";
 import registerPrompts from "@xynogen/pix-prompts/src/extension.ts";
 import registerRead from "@xynogen/pix-read/src/extension.ts";
 import registerSkills from "@xynogen/pix-skills/src/index.ts";
@@ -43,6 +44,10 @@ type Factory = (pi: never) => void;
 
 const MEMBERS: Factory[] = [
 	registerData,
+	// pix-pretty seeds the global icon mode (initIconMode) and registers
+	// /pretty + FFF commands. It must run before icon() consumers (footer,
+	// display, models, welcome, optimizer) so the mode is set when they paint.
+	registerPretty,
 	registerWelcome,
 	registerFooter,
 	registerModels,

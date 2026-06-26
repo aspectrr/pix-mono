@@ -21,6 +21,7 @@ import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, RST } from "@xynogen/pix-pretty/ansi";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // Upstream stopped re-exporting `EditorFactory` from the package entry point,
 // so we reconstruct its signature locally from the still-exported primitives.
@@ -166,15 +167,20 @@ export function restyleMarkers(line: string, imageIds: Set<number>): string {
 		(_full, idStr, _g2, _g3, linesStr, charsStr) => {
 			const id = Number.parseInt(idStr, 10);
 			if (imageIds.has(id)) {
-				return chip(FG_BLUE, "󰋩", "image", `#${id}`);
+				return chip(FG_BLUE, icon("paste.image"), "image", `#${id}`);
 			}
 			if (linesStr) {
-				return chip(FG_GREEN, "󰉿", "text", `${linesStr} lines`);
+				return chip(FG_GREEN, icon("paste.text"), "text", `${linesStr} lines`);
 			}
 			if (charsStr) {
-				return chip(FG_GREEN, "󰉿", "text", `${compactNumber(charsStr)} chars`);
+				return chip(
+					FG_GREEN,
+					icon("paste.text"),
+					"text",
+					`${compactNumber(charsStr)} chars`,
+				);
 			}
-			return chip(FG_GREEN, "󰉿", "text", `#${id}`);
+			return chip(FG_GREEN, icon("paste.text"), "text", `#${id}`);
 		},
 	);
 }

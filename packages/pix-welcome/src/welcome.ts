@@ -38,6 +38,7 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Theme shim (same pattern as footer.ts) ───────────────────────────────────
 
@@ -356,11 +357,14 @@ function buildLogoLines(theme: Theme, model: string, cwd: string): string[] {
 			case "heading":
 				return `${pad}${l}  ${theme.fg("muted", "PIx")}`;
 			case "model":
-				return `${pad}${l}  ${theme.fg("muted", "󰚩")}  ${theme.fg("text", model)}`;
+				return `${pad}${l}  ${theme.fg("muted", icon("model"))}  ${theme.fg("text", model)}`;
 			case "cwd":
-				return `${pad}${l}  ${theme.fg("muted", "")}  ${theme.fg("text", cwd)}`;
-			case "ready":
-				return `${pad}${l}  ${theme.fg("success", "󰘳")}  ${theme.bold(theme.fg("success", "ready"))}`;
+				return `${pad}${l}  ${theme.fg("muted", icon("folder"))}  ${theme.fg("text", cwd)}`;
+			case "ready": {
+				const mark = theme.fg("success", icon("ready"));
+				const label = theme.bold(theme.fg("success", "ready"));
+				return `${pad}${l}  ${mark}  ${label}`;
+			}
 			default:
 				return `${pad}${l}`;
 		}

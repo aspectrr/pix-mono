@@ -9,12 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-	loadIconMode,
-	loadOptValue,
-	saveIconMode,
-	saveOptValue,
-} from "./persist.ts";
+import { loadOptValue, saveOptValue } from "./persist.ts";
 
 let tmpAgentDir: string;
 
@@ -57,22 +52,5 @@ describe("optimizer persistence", () => {
 		saveOptValue("caveman", "ultra");
 		expect(loadOptValue("caveman")).toBe("ultra");
 		expect(loadOptValue("ponytail")).toBe("full");
-	});
-
-	test("icon mode round-trips and is independent of tool values", () => {
-		expect(loadIconMode()).toBeUndefined();
-		saveIconMode("unicode");
-		expect(loadIconMode()).toBe("unicode");
-		// Did not disturb existing tool state…
-		expect(loadOptValue("caveman")).toBe("ultra");
-		// …and a later tool write does not disturb the icon mode.
-		saveOptValue("rtk", "on");
-		expect(loadIconMode()).toBe("unicode");
-	});
-
-	test("rejects an invalid persisted icon mode", () => {
-		saveOptValue("caveman", "lite"); // unrelated write
-		saveIconMode("ascii");
-		expect(loadIconMode()).toBe("ascii");
 	});
 });

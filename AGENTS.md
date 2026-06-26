@@ -183,6 +183,28 @@ Each package is intended to be **independently installable and usable**.
 
 ---
 
+## Icon Catalog (l10n-style)
+
+Packages must **never hardcode Nerd Font glyph codepoints** (PUA: U+E000–U+F8FF, U+F0000+). Terminals without a Nerd Font render them as missing-glyph “tofu” boxes. Instead, use the **semantic icon catalog** in `pix-pretty`:
+
+```ts
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
+icon("cwd")        // returns the glyph for the active mode (PUA / BMP / ASCII)
+icon("paste.image") // → glyph for paste image chip
+```
+
+**Catalog:** `packages/pix-pretty/src/icon-catalog.ts`
+
+- `icon(key)` resolves a semantic key against the active icon mode (`nerd`/`unicode`/`ascii`).
+- `iconFor(key, mode)` resolves against an explicit mode (for previews).
+- Keys are **semantic roles** (`"model"`, `"cwd"`, `"paste.image"`, `"opt.caveman"`), never glyph names.
+- `PRETTY_ICONS` env seeds the default; `/pretty` command switches it live, persisted to `~/.pi/agent/pretty.json`.
+- `onIconModeChange(cb)` — observer for pushed-status consumers (e.g. `OptimizerStatus`) that only repaint on explicit calls, not continuous re-render.
+
+**When adding a new icon:** add a key to the `CATALOG` in `icon-catalog.ts` with `nerd`/`unicode`/`ascii` variants. Never add raw codepoints to consumer packages.
+
+---
+
 ## Key Rules
 
 - **Never commit directly without running `bun run check` + `bun run typecheck`** — CI will fail.

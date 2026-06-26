@@ -10,9 +10,11 @@
 
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { registerFffCommands } from "./commands/fff.js";
+import { registerPrettyCommand } from "./commands/pretty.js";
 import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import { fffState } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
+import { initIconMode } from "./icon-persist.js";
 import type { PiPrettyApi } from "./types.js";
 
 export default function piPrettyExtension(pi: PiPrettyApi): void {
@@ -27,6 +29,12 @@ export default function piPrettyExtension(pi: PiPrettyApi): void {
 		})(),
 	);
 	clearHighlightCache();
+
+	// ── Icon mode ───────────────────────────────────────────
+	// Seed the global icon mode from pretty.json (overrides env default), then
+	// register the single /pretty switch.
+	initIconMode();
+	registerPrettyCommand(pi);
 
 	// ── FFF slash commands ──────────────────────────────────────────────
 	// fffState is a module-level singleton shared with pix-grep/pix-find.

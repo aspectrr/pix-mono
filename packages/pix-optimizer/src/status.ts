@@ -17,6 +17,11 @@ import type {
 	ExtensionContext,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
+import {
+	type IconKey,
+	icon,
+	onIconModeChange,
+} from "@xynogen/pix-pretty/icon-catalog";
 
 /**
  * Each optimizer tool (caveman/rtk/toon/ponytail) exposes a handle so the
@@ -43,70 +48,22 @@ export const STATUS_KEY = "pix-optimizer";
 export type OptimizerTool = "caveman" | "rtk" | "toon" | "ponytail";
 
 /**
- * Icon presentation modes. The optimizer cell defaults to Nerd Font glyphs,
- * which require a patched font (e.g. MesloLGS NF). Terminals without one show
- * missing-glyph tofu, so two font-independent fallbacks are offered:
- *   - `unicode`: outline playing-card suits (standard BMP, ships with virtually
- *     every monospace font) + U+FE0E to force text (non-emoji) presentation.
- *   - `ascii`: two-letter labels, renders on literally any terminal.
- * Mode is chosen via the /optimizer menu (persisted) or the OPTIMIZER_ICONS /
- * PRETTY_ICONS env vars.
+ * Icons come from the shared pix-pretty catalog and follow the ONE global icon
+ * mode (set via /pretty). The optimizer no longer owns a mode: each tool maps
+ * to a semantic catalog key, and the cell renders whatever the active mode
+ * resolves — nerd / unicode / ascii — with no per-package knob.
  */
-export type IconMode = "nerd" | "unicode" | "ascii";
-
-/** All selectable icon modes, in /optimizer cycle order. */
-export const ICON_MODES: readonly IconMode[] = ["nerd", "unicode", "ascii"];
-
-/** Force text (non-emoji) presentation for symbols that default to emoji. */
-const VS_TEXT = "\uFE0E";
-
-/** Per-mode glyph table for each tool. */
-const ICON_SETS: Record<IconMode, Record<OptimizerTool, string>> = {
-	nerd: {
-		caveman: "󰜐",
-		rtk: "󰓥",
-		toon: "󰗀",
-		ponytail: "󰆐",
-	},
-	unicode: {
-		caveman: `\u2664${VS_TEXT}`, // ♤ white spade
-		rtk: `\u2661${VS_TEXT}`, // ♡ white heart
-		toon: `\u2662${VS_TEXT}`, // ♢ white diamond
-		ponytail: `\u2667${VS_TEXT}`, // ♧ white club
-	},
-	ascii: {
-		caveman: "Cv",
-		rtk: "Rk",
-		toon: "Tn",
-		ponytail: "Pt",
-	},
+const TOOL_ICON_KEY: Record<OptimizerTool, IconKey> = {
+	caveman: "opt.caveman",
+	rtk: "opt.rtk",
+	toon: "opt.toon",
+	ponytail: "opt.ponytail",
 };
 
-/** Resolve the glyph table for a mode. */
-export function getIcons(mode: IconMode): Record<OptimizerTool, string> {
-	return ICON_SETS[mode] ?? ICON_SETS.nerd;
+/** Current glyph for a tool, resolved against the active global icon mode. */
+export function toolIcon(tool: OptimizerTool): string {
+	return icon(TOOL_ICON_KEY[tool]);
 }
-
-/**
- * Default icon mode from the environment. OPTIMIZER_ICONS takes precedence;
- * PRETTY_ICONS=none|off maps to ascii so one stack-wide var disables glyphs.
- * Anything unrecognized (or unset) falls back to `nerd`. A persisted menu
- * choice overrides this at load time (see persist.loadIconMode).
- */
-export function envIconMode(): IconMode {
-	const raw = (process.env.OPTIMIZER_ICONS ?? "").toLowerCase();
-	if (raw === "nerd" || raw === "unicode" || raw === "ascii") return raw;
-	const pretty = (process.env.PRETTY_ICONS ?? "").toLowerCase();
-	if (pretty === "none" || pretty === "off") return "ascii";
-	return "nerd";
-}
-
-/**
- * Default Nerd Font glyph table. Kept as a named export for back-compat with
- * callers/tests that reference the nerd set directly; equivalent to
- * getIcons("nerd").
- */
-export const TOOL_ICONS: Record<OptimizerTool, string> = ICON_SETS.nerd;
 
 /** Fixed left-to-right order of icons in the cell. */
 const TOOL_ORDER: readonly OptimizerTool[] = [
@@ -127,8 +84,8 @@ export type Colorize = (color: ThemeColor, text: string) => string;
 /**
  * Build the colored status string for a set of tool states. ALL tool icons are
  * always shown, in TOOL_ORDER; each is accent-colored when its tool is enabled
- * and dim when disabled. `color` applies the theme color (e.g. theme.fg).
- * `mode` selects the glyph table (nerd / unicode / ascii); defaults to nerd.
+ * and dim when disabled. Glyphs resolve against the active global icon mode
+ * (see /pretty). `color` applies the theme color (e.g. theme.fg).
  *
  * Pure + exported for tests (pass a tagging colorizer to assert per-icon color).
  * A trailing space separates the cell from the next status segment.
@@ -136,11 +93,9 @@ export type Colorize = (color: ThemeColor, text: string) => string;
 export function renderStatus(
 	states: Partial<Record<OptimizerTool, boolean>>,
 	color: Colorize,
-	mode: IconMode = "nerd",
 ): string {
-	const icons = getIcons(mode);
 	return `${TOOL_ORDER.map((t) =>
-		color(states[t] === true ? ENABLED_COLOR : DISABLED_COLOR, icons[t]),
+		color(states[t] === true ? ENABLED_COLOR : DISABLED_COLOR, toolIcon(t)),
 	).join("  ")} `;
 }
 
@@ -151,27 +106,21 @@ export function renderStatus(
  */
 export class OptimizerStatus {
 	private states: Partial<Record<OptimizerTool, boolean>> = {};
-	private iconMode: IconMode;
+	/** Latest ui ctx seen, so an icon-mode change can repaint without a toggle. */
+	private lastCtx: Pick<ExtensionContext, "ui"> | undefined;
 
-	/** `mode` seeds the icon set (persisted choice or env default). */
-	constructor(mode: IconMode = "nerd") {
-		this.iconMode = mode;
+	constructor() {
+		// The cell is a pushed status (setStatus), so it does NOT auto-refresh
+		// when /pretty flips the global icon mode. Repaint it on mode change
+		// using the last-seen ctx (no-op until the cell has painted once).
+		onIconModeChange(() => {
+			if (this.lastCtx) this.paint(this.lastCtx);
+		});
 	}
 
 	/** Current enabled state for one tool (undefined until first set). */
 	get(tool: OptimizerTool): boolean | undefined {
 		return this.states[tool];
-	}
-
-	/** Current icon presentation mode. */
-	get mode(): IconMode {
-		return this.iconMode;
-	}
-
-	/** Switch icon mode and repaint the shared cell. */
-	setMode(mode: IconMode, ctx: Pick<ExtensionContext, "ui">): void {
-		this.iconMode = mode;
-		this.paint(ctx);
 	}
 
 	/** Update one tool's enabled state and repaint the shared cell. */
@@ -186,11 +135,8 @@ export class OptimizerStatus {
 
 	/** Repaint the shared cell from current states. */
 	paint(ctx: Pick<ExtensionContext, "ui">): void {
-		const text = renderStatus(
-			this.states,
-			(c, t) => ctx.ui.theme.fg(c, t),
-			this.iconMode,
-		);
+		this.lastCtx = ctx;
+		const text = renderStatus(this.states, (c, t) => ctx.ui.theme.fg(c, t));
 		ctx.ui.setStatus(STATUS_KEY, text);
 	}
 }

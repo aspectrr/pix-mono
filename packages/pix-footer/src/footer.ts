@@ -28,6 +28,7 @@ import {
 	lookupBenchmark,
 	lookupModelsDev,
 } from "@xynogen/pix-data";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
@@ -157,7 +158,7 @@ function renderTokens(
 	theme: Theme,
 	dim = false,
 ): string {
-	let s = `⇡ ${fmtToken(totals.input)} ⇣ ${fmtToken(totals.output)}`;
+	let s = `${icon("net.in")} ${fmtToken(totals.input)} ${icon("net.out")} ${fmtToken(totals.output)}`;
 	if (totals.cost > 0) s += ` $${totals.cost.toFixed(3)}`;
 	return theme.fg(dim ? "dim" : "muted", s);
 }
@@ -190,10 +191,13 @@ function renderBranch(
 	const markers: string[] = [];
 	if (gs) {
 		if (gs.staged > 0) markers.push(theme.fg("success", `+${gs.staged}`));
-		if (gs.unstaged > 0) markers.push(theme.fg("error", `✗${gs.unstaged}`));
+		if (gs.unstaged > 0)
+			markers.push(theme.fg("error", `${icon("git.unstaged")}${gs.unstaged}`));
 		if (gs.untracked > 0) markers.push(theme.fg("warning", `?${gs.untracked}`));
-		if (gs.ahead > 0) markers.push(theme.fg("accent", `⇡${gs.ahead}`));
-		if (gs.behind > 0) markers.push(theme.fg("accent", `⇣${gs.behind}`));
+		if (gs.ahead > 0)
+			markers.push(theme.fg("accent", `${icon("git.ahead")}${gs.ahead}`));
+		if (gs.behind > 0)
+			markers.push(theme.fg("accent", `${icon("git.behind")}${gs.behind}`));
 	}
 	return { branchSeg, markersSeg: markers.join(" ") };
 }
@@ -207,7 +211,7 @@ function renderModel(
 	const rawId = model?.id ?? "?";
 	const id = rawId.replace(/^[a-z]+\//i, "");
 	const provider = model?.provider ?? "";
-	let out = theme.fg("muted", "󰚩  ") + theme.fg("accent", id);
+	let out = theme.fg("muted", `${icon("model")}  `) + theme.fg("accent", id);
 	const THINK_ABBR: Record<string, string> = {
 		minimal: "min",
 		low: "low",
@@ -230,7 +234,9 @@ function renderModel(
 	if (bench) {
 		const score = bench.overallScore ?? "?";
 		const scoreColor = benchScoreColor(bench.overallScore);
-		out += theme.fg("muted", " · ") + theme.fg(scoreColor, `⚡${score}`);
+		out +=
+			theme.fg("muted", " · ") +
+			theme.fg(scoreColor, `${icon("score")}${score}`);
 	}
 	return out;
 }
@@ -244,13 +250,14 @@ function compactStatus(key: string, value: string, theme: Theme): string {
 	switch (key) {
 		case "pi-lens-lsp": {
 			const m = raw.match(/LSP Active \((\d+)\)/);
-			if (m) return theme.fg("success", `󰘦  ${m[1]}`);
-			if (/LSP Inactive/.test(raw)) return theme.fg("error", "󰘦  off");
+			if (m) return theme.fg("success", `${icon("lsp")}  ${m[1]}`);
+			if (/LSP Inactive/.test(raw))
+				return theme.fg("error", `${icon("lsp")}  off`);
 			return value;
 		}
 		case "mcp": {
 			const m = raw.match(/(\d+)\/(\d+)\s+servers/);
-			if (m) return theme.fg("muted", `󰒍 ${m[1]}/${m[2]}`);
+			if (m) return theme.fg("muted", `${icon("mcp")} ${m[1]}/${m[2]}`);
 			return value;
 		}
 		case "caveman": {
@@ -492,7 +499,7 @@ export default function (pi: ExtensionAPI) {
 						);
 
 						const loc =
-							theme.fg("muted", "󰉋  ") +
+							theme.fg("muted", `${icon("cwd")}  `) +
 							theme.fg("accent", shortCwd(ctx.cwd)) +
 							branchSeg;
 						const markersPart = markersSeg ? sep + markersSeg : "";
