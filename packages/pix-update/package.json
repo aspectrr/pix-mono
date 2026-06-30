@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-update",
-	"version": "0.1.10",
+	"version": "0.1.11",
 	"description": "Pi extension — /update self-update command",
 	"type": "module",
 	"main": "src/index.ts",

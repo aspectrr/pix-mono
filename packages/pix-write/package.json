@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-write",
-	"version": "0.1.8",
+	"version": "0.1.9",
 	"description": "Pi tool — file write with diff rendering",
 	"type": "module",
 	"main": "src/index.ts",
