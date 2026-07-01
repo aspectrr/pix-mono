@@ -6,6 +6,7 @@ import type {
 	WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
 
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { MAX_RENDER_LINES } from "@xynogen/pix-pretty/config";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { parseDiff } from "@xynogen/pix-pretty/diff";
@@ -146,6 +147,21 @@ export function registerWriteTool(
 				return text;
 			}
 			const d = result.details as Record<string, unknown> | undefined;
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("write", cs, renderCtx.invalidate)) {
+				const summary =
+					d?._type === "diff"
+						? (d.summary as string)
+						: d?._type === "noChange"
+							? "✓ no changes"
+							: d?._type === "new"
+								? `✓ new file (${d.lines} lines)`
+								: "written";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				return text;
+			}
 
 			if (d?._type === "diff") {
 				const key = `wd:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${(d.newContent as string).length}:${d.language ?? ""}`;

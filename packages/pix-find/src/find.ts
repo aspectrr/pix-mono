@@ -3,6 +3,7 @@ import type {
 	FindToolInput,
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import type {
 	FindParams,
@@ -131,6 +132,18 @@ export function registerFindTool(
 
 			if (renderCtx.isError) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				return text;
+			}
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("find", cs, renderCtx.invalidate)) {
+				const d = result.details;
+				const summary =
+					d?._type === "findResult" && d.matchCount != null
+						? `${d.matchCount} files`
+						: "found";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
 				return text;
 			}
 

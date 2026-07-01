@@ -3,6 +3,7 @@ import type {
 	GrepToolInput,
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { fffFormatGrepText } from "@xynogen/pix-pretty/fff";
 import type {
@@ -162,6 +163,18 @@ export function registerGrepTool(
 			}
 
 			const d = result.details;
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("grep", cs, renderCtx.invalidate)) {
+				const summary =
+					d?._type === "grepResult"
+						? pluralize(d.matchCount, "match", "matches")
+						: "searched";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				return text;
+			}
+
 			const output = getTextContent(result) || "searched";
 			text.setText(
 				renderDimPreview(output, theme, {

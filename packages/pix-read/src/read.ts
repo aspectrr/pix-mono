@@ -3,7 +3,7 @@ import type {
 	ExtensionContext,
 	ReadToolInput,
 } from "@earendil-works/pi-coding-agent";
-
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
@@ -123,6 +123,26 @@ export function registerReadTool(
 			}
 
 			const d = result.details as Record<string, unknown> | undefined;
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("read", cs, renderCtx.invalidate)) {
+				if (d?._type === "readFile") {
+					text.setText(
+						fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`),
+					);
+				} else if (d?._type === "readImage") {
+					const byteSize = Math.ceil(((d.data as string).length * 3) / 4);
+					text.setText(
+						fillToolBackground(
+							`  ${FG_DIM}${d.mimeType ?? "image"} · ${humanSize(byteSize)}${RST}`,
+						),
+					);
+				} else {
+					text.setText(fillToolBackground(`  ${theme.fg("muted", "read")}`));
+				}
+				return text;
+			}
 
 			if (d?._type === "readImage") {
 				const byteSize = Math.ceil(((d.data as string).length * 3) / 4);

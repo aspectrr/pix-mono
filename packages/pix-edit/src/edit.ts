@@ -6,6 +6,7 @@ import type {
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { MAX_RENDER_LINES } from "@xynogen/pix-pretty/config";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { parseDiff } from "@xynogen/pix-pretty/diff";
@@ -202,6 +203,19 @@ export function registerEditTool(
 				return text;
 			}
 			const d = result.details as Record<string, unknown> | undefined;
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("edit", cs, renderCtx.invalidate)) {
+				const summary =
+					d?._type === "editInfo"
+						? (d.summary as string)
+						: d?._type === "multiEditInfo"
+							? `${d.editCount} edits ${d.summary}`
+							: "edited";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				return text;
+			}
 
 			// Single edit — full split diff
 			if (d?._type === "editInfo") {

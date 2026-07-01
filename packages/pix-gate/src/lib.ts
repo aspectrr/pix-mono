@@ -2,9 +2,7 @@
  * Pure helpers for pix-gate — no Pi API deps, fully unit-testable.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { pixConfig } from "@xynogen/pix-data/pix-config";
 
 export type Severity = "critical" | "dangerous" | "risky";
 
@@ -132,13 +130,21 @@ export const DEFAULT_RULES: Rule[] = [
 ];
 
 export function loadUserConfig(): UserConfig {
-	const path = join(homedir(), ".pi", "agent", "pix-gate.json");
-	if (!existsSync(path)) return {};
-	try {
-		return JSON.parse(readFileSync(path, "utf-8")) as UserConfig;
-	} catch {
-		return {};
-	}
+	// Read from ~/.pi/agent/pix.json gate section
+	const pix = pixConfig().gate;
+	return {
+		disableDefaults: pix.disableDefaults || undefined,
+		autoApprove: pix.autoApprove.length > 0 ? pix.autoApprove : undefined,
+		extraRules:
+			pix.extraRules.length > 0
+				? pix.extraRules.map((r) => ({
+						pattern: r.pattern,
+						flags: r.flags,
+						severity: r.severity as Severity | undefined,
+						reason: r.reason,
+					}))
+				: undefined,
+	};
 }
 
 export function buildRules(cfg: UserConfig): {

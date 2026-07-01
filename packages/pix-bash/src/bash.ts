@@ -5,6 +5,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import { truncateToWidth } from "@earendil-works/pi-tui";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
@@ -128,6 +129,24 @@ export function registerBashTool(
 			}
 
 			const d = result.details as Record<string, unknown> | undefined;
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("bash", cs, renderCtx.invalidate)) {
+				if (d?._type === "bashResult") {
+					const { summary } = renderBashOutput("", d.exitCode as number | null);
+					const normalizedText = normalizeLineEndings(d.text as string)
+						.replace(/\n{3,}/g, "\n\n")
+						.replace(/^\n+|\n+$/g, "");
+					const lc = normalizedText ? normalizedText.split("\n").length : 0;
+					const info = lc > 0 ? ` ${FG_DIM}(${lc} lines)${RST}` : "";
+					text.setText(fillToolBackground(`  ${summary}${info}`));
+				} else {
+					text.setText(fillToolBackground(`  ${theme.fg("muted", "done")}`));
+				}
+				return text;
+			}
+
 			if (d?._type === "bashResult") {
 				const normalizedText = normalizeLineEndings(d.text as string)
 					.replace(/\n{3,}/g, "\n\n")

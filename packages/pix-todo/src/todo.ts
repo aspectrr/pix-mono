@@ -9,14 +9,66 @@
  * checklist is seeded by the model via the tool's `set` action.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import { once } from "./once.ts";
 
-/** Seconds before a todo card collapses to a one-line dim summary. */
-const COLLAPSE_AFTER_SEC = 10;
+// ── Collapse config from ~/.pi/agent/pix.json ────────────────────────────────
+
+interface CollapseConf {
+	enabled: boolean;
+	delaySec: number;
+	tools: Record<string, boolean | undefined>;
+}
+
+const DEFAULT_COLLAPSE: CollapseConf = {
+	enabled: true,
+	delaySec: 10,
+	tools: {},
+};
+
+function readCollapseConfig(): CollapseConf {
+	try {
+		const home = process.env.HOME ?? "";
+		if (!home) return DEFAULT_COLLAPSE;
+		const p = join(home, ".pi/agent", "pix.json");
+		if (!existsSync(p)) return DEFAULT_COLLAPSE;
+		const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
+		const c = raw?.collapse as Record<string, unknown> | undefined;
+		if (!c || typeof c !== "object") return DEFAULT_COLLAPSE;
+		return {
+			enabled: typeof c.enabled === "boolean" ? c.enabled : true,
+			delaySec:
+				typeof c.delaySec === "number" && c.delaySec > 0 ? c.delaySec : 10,
+			tools:
+				c.tools && typeof c.tools === "object"
+					? (c.tools as Record<string, boolean | undefined>)
+					: {},
+		};
+	} catch {
+		return DEFAULT_COLLAPSE;
+	}
+}
+
+let collapseConf: CollapseConf | null = null;
+function getCollapseConfig(): CollapseConf {
+	if (!collapseConf) collapseConf = readCollapseConfig();
+	return collapseConf;
+}
+
+function shouldCollapseTodo(): boolean {
+	const c = getCollapseConfig();
+	const perTool = c.tools.todo;
+	return typeof perTool === "boolean" ? perTool : c.enabled;
+}
+
+function collapseDelayMs(): number {
+	return getCollapseConfig().delaySec * 1000;
+}
 
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
 
@@ -161,11 +213,12 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				};
 				if (!state.snapshot) state.snapshot = todos.map((t) => ({ ...t }));
 				// Start the collapse timer once per row; invalidate() triggers rerender.
-				if (!state.collapsed && !state.timer) {
+				// Config-driven: reads from ~/.pi/agent/pix.json collapse section.
+				if (shouldCollapseTodo() && !state.collapsed && !state.timer) {
 					state.timer = setTimeout(() => {
 						state.collapsed = true;
 						context.invalidate();
-					}, COLLAPSE_AFTER_SEC * 1000);
+					}, collapseDelayMs());
 				}
 				const render = state.collapsed
 					? renderTodoSummaryLine

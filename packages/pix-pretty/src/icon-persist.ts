@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { pixConfig } from "@xynogen/pix-data/pix-config";
 import { ICON_MODES, type IconMode, setIconMode } from "./icon-catalog.js";
 
 function isIconMode(m: string): m is IconMode {
@@ -63,8 +64,16 @@ export function saveIconMode(mode: IconMode): void {
 /**
  * Apply the persisted mode (if any) to the catalog. Called once at extension
  * load so the env-seeded default is overridden by the user's saved choice.
+ *
+ * Precedence: env PRETTY_ICONS → pretty.json → pix.json pretty.icons → default ("nerd")
  */
 export function initIconMode(): void {
 	const saved = loadIconMode();
-	if (saved) setIconMode(saved);
+	if (saved) {
+		setIconMode(saved);
+		return;
+	}
+	// No persisted choice — try pix.json
+	const pixIcons = pixConfig().pretty.icons;
+	if (pixIcons && isIconMode(pixIcons)) setIconMode(pixIcons);
 }

@@ -8,6 +8,7 @@
 // technique below works unchanged — diff backgrounds layer underneath and
 // persist through fg switches.
 
+import { pixConfig } from "@xynogen/pix-data/pix-config";
 import * as Diff from "diff";
 import { BG_BASE, BOLD, FG_DIM, FG_LNUM, FG_RULE, RST } from "./ansi.js";
 import { MAX_HL_CHARS, MAX_RENDER_LINES, WORD_DIFF_MIN_SIM } from "./config.js";
@@ -44,21 +45,58 @@ function envBg(name: string, fallback: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Diff-specific ANSI (override via env, hex "#RRGGBB")
+// Diff-specific ANSI (override via env → pix.json → hardcoded)
 // ---------------------------------------------------------------------------
 
 const DIM = "\x1b[2m";
 
-// Subtle diff backgrounds — muted tones to let syntax fg shine through.
-const BG_ADD = envBg("DIFF_BG_ADD", "\x1b[48;2;22;38;32m"); // muted teal-green
-const BG_DEL = envBg("DIFF_BG_DEL", "\x1b[48;2;45;25;25m"); // muted brown-red
-const BG_ADD_W = envBg("DIFF_BG_ADD_HL", "\x1b[48;2;35;75;50m"); // word emphasis
-const BG_DEL_W = envBg("DIFF_BG_DEL_HL", "\x1b[48;2;80;35;35m");
-const BG_GUTTER_ADD = envBg("DIFF_BG_GUTTER_ADD", "\x1b[48;2;18;32;26m");
-const BG_GUTTER_DEL = envBg("DIFF_BG_GUTTER_DEL", "\x1b[48;2;38;22;22m");
+function hexToBg(hex: string): string {
+	if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return "";
+	const r = Number.parseInt(hex.slice(1, 3), 16);
+	const g = Number.parseInt(hex.slice(3, 5), 16);
+	const b = Number.parseInt(hex.slice(5, 7), 16);
+	return `\x1b[48;2;${r};${g};${b}m`;
+}
 
-const FG_ADD = envFg("DIFF_FG_ADD", "\x1b[38;2;100;180;120m"); // desaturated green
-const FG_DEL = envFg("DIFF_FG_DEL", "\x1b[38;2;200;100;100m"); // desaturated red
+function hexToFg(hex: string): string {
+	if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return "";
+	const r = Number.parseInt(hex.slice(1, 3), 16);
+	const g = Number.parseInt(hex.slice(3, 5), 16);
+	const b = Number.parseInt(hex.slice(5, 7), 16);
+	return `\x1b[38;2;${r};${g};${b}m`;
+}
+
+const dc = pixConfig().pretty.diff;
+
+// Subtle diff backgrounds — muted tones to let syntax fg shine through.
+// Precedence: env → pix.json → hardcoded default
+const BG_ADD = envBg("DIFF_BG_ADD", hexToBg(dc.bgAdd) || "\x1b[48;2;22;38;32m");
+const BG_DEL = envBg("DIFF_BG_DEL", hexToBg(dc.bgDel) || "\x1b[48;2;45;25;25m");
+const BG_ADD_W = envBg(
+	"DIFF_BG_ADD_HL",
+	hexToBg(dc.bgAddHighlight) || "\x1b[48;2;35;75;50m",
+);
+const BG_DEL_W = envBg(
+	"DIFF_BG_DEL_HL",
+	hexToBg(dc.bgDelHighlight) || "\x1b[48;2;80;35;35m",
+);
+const BG_GUTTER_ADD = envBg(
+	"DIFF_BG_GUTTER_ADD",
+	hexToBg(dc.bgGutterAdd) || "\x1b[48;2;18;32;26m",
+);
+const BG_GUTTER_DEL = envBg(
+	"DIFF_BG_GUTTER_DEL",
+	hexToBg(dc.bgGutterDel) || "\x1b[48;2;38;22;22m",
+);
+
+const FG_ADD = envFg(
+	"DIFF_FG_ADD",
+	hexToFg(dc.fgAdd) || "\x1b[38;2;100;180;120m",
+);
+const FG_DEL = envFg(
+	"DIFF_FG_DEL",
+	hexToFg(dc.fgDel) || "\x1b[38;2;200;100;100m",
+);
 const FG_STRIPE = "\x1b[38;2;40;40;40m"; // diagonal stripes on filler cells
 
 const BORDER_BAR = "▌";
@@ -76,8 +114,11 @@ const MAX_TERM_WIDTH = 210;
 
 const MAX_PREVIEW_LINES = envInt("PRETTY_MAX_PREVIEW_LINES", 80);
 
-const SPLIT_MIN_WIDTH = envInt("DIFF_SPLIT_MIN_WIDTH", 150);
-const SPLIT_MIN_CODE_WIDTH = envInt("DIFF_SPLIT_MIN_CODE_WIDTH", 60);
+const SPLIT_MIN_WIDTH = envInt("DIFF_SPLIT_MIN_WIDTH", dc.splitMinWidth || 150);
+const SPLIT_MIN_CODE_WIDTH = envInt(
+	"DIFF_SPLIT_MIN_CODE_WIDTH",
+	dc.splitMinCodeWidth || 60,
+);
 const SPLIT_MAX_WRAP_RATIO = 0.2;
 const SPLIT_MAX_WRAP_LINES = 8;
 

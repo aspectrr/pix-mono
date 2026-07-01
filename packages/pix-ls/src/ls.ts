@@ -3,6 +3,7 @@ import type {
 	ExtensionContext,
 	LsToolInput,
 } from "@earendil-works/pi-coding-agent";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { renderTree } from "@xynogen/pix-pretty/renderers";
@@ -85,6 +86,16 @@ export function registerLsTool(
 
 			if (renderCtx.isError) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				return text;
+			}
+
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("ls", cs, renderCtx.invalidate)) {
+				const d2 = result.details as Record<string, unknown> | undefined;
+				const summary =
+					d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
 				return text;
 			}
 
