@@ -2,7 +2,7 @@
  * Pure helpers for pix-gate — no Pi API deps, fully unit-testable.
  */
 
-import { pixConfig } from "@xynogen/pix-data/pix-config";
+import { pixConfig, type GateRuleConfig } from "@xynogen/pix-data/pix-config";
 
 export type Severity = "critical" | "dangerous" | "risky";
 
@@ -137,7 +137,7 @@ export function loadUserConfig(): UserConfig {
 		autoApprove: pix.autoApprove.length > 0 ? pix.autoApprove : undefined,
 		extraRules:
 			pix.extraRules.length > 0
-				? pix.extraRules.map((r) => ({
+				? pix.extraRules.map((r: GateRuleConfig) => ({
 						pattern: r.pattern,
 						flags: r.flags,
 						severity: r.severity as Severity | undefined,
