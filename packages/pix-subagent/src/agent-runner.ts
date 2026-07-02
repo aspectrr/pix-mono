@@ -898,7 +898,9 @@ export function getAgentConversation(
 	let budget = maxChars;
 	let firstKept = parts.length;
 	for (let i = parts.length - 1; i >= 0; i--) {
-		const cost = parts[i].length + (i < parts.length - 1 ? 2 : 0);
+		const part = parts[i];
+		if (!part) break;
+		const cost = part.length + (i < parts.length - 1 ? 2 : 0);
 		if (budget - cost < 0) break;
 		budget -= cost;
 		firstKept = i;
