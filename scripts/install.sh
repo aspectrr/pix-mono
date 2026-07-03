@@ -170,7 +170,7 @@ install_pi_pkg "$THEME_PACKAGE"
 
 # Recommended community packages — installed unless declined.
 printf '\n'
-info "\033[1mRecommended community packages\033[0m (enhances Pi with LSP + MCP capabilities):"
+printf '\033[0;34m›\033[0m \033[1mRecommended community packages\033[0m (enhances Pi with LSP + MCP capabilities):\n'
 OLD_IFS=$IFS
 IFS='
 '
@@ -191,7 +191,7 @@ IFS=$OLD_IFS
 
 # Opt-in pix extensions — each carries a setup cost or sensitive capability.
 printf '\n'
-info "\033[1mOptional Pix extensions\033[0m (need extra setup or grant sensitive capabilities):"
+printf '\033[0;34m›\033[0m \033[1mOptional Pix extensions\033[0m (need extra setup or grant sensitive capabilities):\n'
 OLD_IFS=$IFS
 IFS='
 '
@@ -212,7 +212,7 @@ IFS=$OLD_IFS
 
 # Opt-in community extensions — third-party packages.
 printf '\n'
-info "\033[1mOptional community extensions\033[0m (third-party packages, not part of pix):"
+printf '\033[0;34m›\033[0m \033[1mOptional community extensions\033[0m (third-party packages, not part of pix):\n'
 OLD_IFS=$IFS
 IFS='
 '
