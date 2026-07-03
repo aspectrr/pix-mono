@@ -92,4 +92,19 @@ describe("pix-prompts host-aware injection", () => {
 			(first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
 		expect(occurrences).toBe(1);
 	});
+
+	it("replaces pi's default identity line with generic version", async () => {
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const piDefault =
+			"You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.";
+		const result = await getHandler()({ systemPrompt: piDefault });
+
+		// Should replace the restrictive identity line
+		expect(result?.systemPrompt).not.toContain(
+			"You are an expert coding assistant operating inside pi",
+		);
+		expect(result?.systemPrompt).toContain("You are Pix Coding Agent");
+	});
 });

@@ -135,7 +135,6 @@ export default function registerSearch(pi: ExtensionAPI): void {
 		promptGuidelines: [
 			"Use search when you need up-to-date information or facts from the web.",
 			"Set search_type='web' for general web results, search_type='news' for recent news articles.",
-			"Always prefer search over raw curl/browser requests for information lookup.",
 		],
 		renderCall: makeRenderCall("search", (args) => String(args.query ?? "")),
 		renderResult: makeRenderResult(),

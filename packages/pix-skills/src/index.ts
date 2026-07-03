@@ -218,13 +218,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		description:
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
-		promptGuidelines: [
-			"Skills are NOT pre-listed in this prompt. When a task may match a specialized procedure, call read_skills() first to discover what is available.",
-			"Call read_skills() with no arguments to list all available skills and their descriptions.",
-			"Call read_skills(name=<skill>) to read the description of a specific skill before deciding to load it.",
-			"Call read_skills(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
-			"Prefer read_skills() over the read tool for skills — it resolves the correct path regardless of install location.",
-		],
+		promptGuidelines: ["Matching skill? Call read_skills() first."],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
 

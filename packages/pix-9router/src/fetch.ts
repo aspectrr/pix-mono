@@ -118,7 +118,6 @@ export default function registerFetch(pi: ExtensionAPI): void {
 			"Use fetch when you need to read the full content of a specific URL.",
 			"Prefer format='markdown' for readable content, 'text' for plain text extraction, 'html' for raw source.",
 			"Set max_characters to cap response size (default 1000, 0 = unlimited). Use 5000-10000 for typical pages.",
-			"Always prefer fetch over raw curl/browser for reading page content.",
 		],
 		renderCall: makeRenderCall("fetch", (args) => String(args.url ?? "")),
 		renderResult: makeRenderResult(),
