@@ -162,7 +162,7 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 	function registerTools() {
 		pi.registerTool(
 			createAgentTool(
-				pi as Parameters<typeof manager.spawnAndWait>[0],
+				pi as Parameters<typeof manager.spawn>[0],
 				manager,
 				agentActivity,
 				reloadCustomAgents,

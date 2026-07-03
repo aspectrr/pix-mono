@@ -14,13 +14,10 @@ interface AgentInvocationParams {
 	thinking?: string;
 	/** Max turns — new short key. */
 	turns?: number;
-	/** Background flag — new short key. */
-	background?: boolean;
 	inherit_context?: boolean;
 	isolated?: boolean;
 	// Legacy spellings — kept so older callers / persisted invocations still resolve.
 	max_turns?: number;
-	run_in_background?: boolean;
 }
 
 export function resolveAgentInvocationConfig(
@@ -32,7 +29,6 @@ export function resolveAgentInvocationConfig(
 	thinking?: ThinkingLevel;
 	maxTurns?: number;
 	inheritContext: boolean;
-	runInBackground: boolean;
 	isolated: boolean;
 } {
 	// Uniform precedence: caller params always win, config values are defaults.
@@ -47,11 +43,6 @@ export function resolveAgentInvocationConfig(
 		maxTurns: params.turns ?? params.max_turns ?? agentConfig?.maxTurns,
 		inheritContext:
 			params.inherit_context ?? agentConfig?.inheritContext ?? false,
-		runInBackground:
-			params.background ??
-			params.run_in_background ??
-			agentConfig?.runInBackground ??
-			false,
 		isolated: params.isolated ?? agentConfig?.isolated ?? false,
 	};
 }

@@ -1,9 +1,9 @@
 /**
  * agent-manager.ts — Tracks agents, background execution, resume support.
  *
- * Background agents are subject to a configurable concurrency limit (default: 4).
- * Excess agents are queued and auto-started as running agents complete.
- * Foreground agents bypass the queue (they block the parent anyway).
+ * All agents run in background and are subject to a configurable concurrency
+ * limit (default: 4). Excess agents are queued and auto-started as running
+ * agents complete.
  */
 
 import { randomUUID } from "node:crypto";
@@ -392,27 +392,6 @@ export class AgentManager {
 				this.onComplete?.(record);
 			}
 		}
-	}
-
-	/**
-	 * Spawn an agent and wait for completion (foreground use).
-	 * Foreground agents bypass the concurrency queue.
-	 */
-	async spawnAndWait(
-		pi: ExtensionAPI,
-		ctx: ExtensionContext,
-		type: SubagentType,
-		prompt: string,
-		options: Omit<SpawnOptions, "isBackground">,
-	): Promise<AgentRecord> {
-		const id = this.spawn(pi, ctx, type, prompt, {
-			...options,
-			isBackground: false,
-		});
-		const record = this.agents.get(id);
-		if (!record) throw new Error(`Agent ${id} not found after spawn`);
-		await record.promise;
-		return record;
 	}
 
 	/**
