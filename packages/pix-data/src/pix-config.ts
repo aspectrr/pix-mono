@@ -41,9 +41,14 @@ export interface DiffColors {
 	fgDel: string;
 }
 
+/** How `ls` output is rendered: `"grid"` (horizontal columns) or `"tree"` (vertical tree view). */
+export type LsStyle = "grid" | "tree";
+
 export interface PrettyConfig {
-	theme: string;
+	syntaxTheme: string;
 	icons: string;
+	/** `"grid"` = horizontal columns (default), `"tree"` = vertical tree view. */
+	lsStyle: LsStyle;
 	maxPreviewLines: number;
 	maxRenderLines: number;
 	maxHighlightChars: number;
@@ -100,8 +105,9 @@ const DEFAULT_COLLAPSE: CollapseConfig = {
 };
 
 const DEFAULT_PRETTY: PrettyConfig = {
-	theme: "github-dark",
+	syntaxTheme: "github-dark",
 	icons: "nerd",
+	lsStyle: "grid",
 	maxPreviewLines: 80,
 	maxRenderLines: 150,
 	maxHighlightChars: 80_000,
@@ -220,11 +226,17 @@ function mergeDiff(raw: unknown): DiffColors {
 	};
 }
 
+function lsStyle(v: unknown): LsStyle {
+	if (v === "grid" || v === "tree") return v;
+	return DEFAULT_PRETTY.lsStyle;
+}
+
 function mergePretty(raw: unknown): PrettyConfig {
 	if (!isObj(raw)) return { ...DEFAULT_PRETTY };
 	return {
-		theme: str(raw.theme, DEFAULT_PRETTY.theme),
+		syntaxTheme: str(raw.syntaxTheme, DEFAULT_PRETTY.syntaxTheme),
 		icons: str(raw.icons, DEFAULT_PRETTY.icons),
+		lsStyle: lsStyle(raw.lsStyle),
 		maxPreviewLines: num(raw.maxPreviewLines, DEFAULT_PRETTY.maxPreviewLines),
 		maxRenderLines: num(raw.maxRenderLines, DEFAULT_PRETTY.maxRenderLines),
 		maxHighlightChars: num(raw.maxHighlightChars, DEFAULT_PRETTY.maxHighlightChars),
@@ -269,6 +281,20 @@ function buildConfig(raw: Record<string, unknown>): PixConfig {
 	};
 }
 
+// ── Change listeners ─────────────────────────────────────────────────────────
+
+type ConfigListener = (cfg: PixConfig) => void;
+const configListeners = new Set<ConfigListener>();
+
+/**
+ * Subscribe to config changes (fired by `savePixConfig`). Returns unsubscribe.
+ * Listeners receive the freshly-reloaded PixConfig.
+ */
+export function onPixConfigChange(cb: ConfigListener): () => void {
+	configListeners.add(cb);
+	return () => configListeners.delete(cb);
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /** Get the resolved pix config. Loads from disk on first call, cached after. */
@@ -296,4 +322,45 @@ export function shouldCollapse(toolName: string): boolean {
 /** Get the collapse delay in milliseconds. */
 export function collapseDelayMs(): number {
 	return pixConfig().collapse.delaySec * 1000;
+}
+
+/** Get the ls rendering style: `"grid"` (horizontal) or `"tree"` (vertical). */
+export function getLsStyle(): LsStyle {
+	return pixConfig().pretty.lsStyle;
+}
+
+/**
+ * Merge a partial update into pix.json and reload the in-process cache.
+ * Only the keys present in `patch` are overwritten; the rest of the file is
+ * preserved. Nested objects (e.g. `pretty`, `collapse`) are shallow-merged
+ * one level deep so callers can update a single field without wiping siblings.
+ */
+export function savePixConfig(patch: Record<string, unknown>): PixConfig {
+	const p = configPath();
+	if (!p) return pixConfig();
+	try {
+		mkdirSync(dirname(p), { recursive: true });
+		let existing: Record<string, unknown> = {};
+		if (existsSync(p)) {
+			try {
+				existing = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
+			} catch {
+				existing = {};
+			}
+		}
+		// Shallow-merge each top-level section so partial updates don't wipe siblings.
+		for (const [key, value] of Object.entries(patch)) {
+			if (isObj(value) && isObj(existing[key])) {
+				existing[key] = { ...(existing[key] as Record<string, unknown>), ...value };
+			} else {
+				existing[key] = value;
+			}
+		}
+		writeFileSync(p, `${JSON.stringify(existing, null, 2)}\n`);
+	} catch (err) {
+		console.warn("pix-config: save failed:", err);
+	}
+	const cfg = reloadPixConfig();
+	for (const cb of configListeners) cb(cfg);
+	return cfg;
 }

@@ -10,16 +10,16 @@
  *   mode:     "nerd" | "unicode" | "ascii"       (the "locale")
  *   icon(k):  catalog[k][mode]                    (the "t(key)")
  *
- * One global mode governs the whole stack. It is switched via the `/pretty`
- * command (see pretty-command.ts), persisted to ~/.pi/agent/pretty.json, and
- * seeded from the PRETTY_ICONS env var on first load.
+ * One global mode governs the whole stack. It is switched via the `/pix`
+ * settings command (in pix-data), persisted to `~/.pi/agent/pix.json`
+ * (`pretty.icons`), and seeded from the PRETTY_ICONS env var on first load.
  *
  * Why a catalog instead of per-package toggles: reskinning or fixing a
  * missing-glyph ("tofu") problem becomes a one-file edit here, and there is
  * exactly ONE knob (the mode) rather than one env var per package.
  */
 
-/** Presentation modes, in /pretty cycle order. nerd = Nerd Font PUA glyphs. */
+/** Presentation modes, in /pix settings cycle order. nerd = Nerd Font PUA glyphs. */
 export type IconMode = "nerd" | "unicode" | "ascii";
 
 /** All modes in cycle order. */
@@ -85,12 +85,12 @@ const CATALOG = {
 /** Every valid semantic icon key. */
 export type IconKey = keyof typeof CATALOG;
 
-/** All catalog keys (useful for /pretty previews and tests). */
+/** All catalog keys (useful for /pix previews and tests). */
 export const ICON_KEYS = Object.keys(CATALOG) as IconKey[];
 
 /**
  * Active mode. Seeded from PRETTY_ICONS env (back-compat: none/off => ascii),
- * then overridden by a persisted choice when the host loads pretty.json.
+ * then overridden by a persisted choice when the host loads pix.json.
  */
 function envMode(): IconMode {
 	const raw = (process.env.PRETTY_ICONS ?? "").toLowerCase();
@@ -123,7 +123,7 @@ export function onIconModeChange(cb: ModeListener): () => void {
 
 /**
  * Set the global icon mode (does NOT persist — callers that want persistence
- * use pretty-command.ts, which writes pretty.json then calls this). Fires
+ * use the /pix command, which writes pix.json then calls this). Fires
  * subscribers only on an actual change (no-op re-sets are ignored).
  */
 export function setIconMode(mode: IconMode): void {
@@ -141,7 +141,7 @@ export function icon(key: IconKey): string {
 	return entry ? entry[activeMode] : "";
 }
 
-/** Resolve a key for an explicit mode (used by /pretty previews + tests). */
+/** Resolve a key for an explicit mode (used by /pix previews + tests). */
 export function iconFor(key: IconKey, mode: IconMode): string {
 	const entry = CATALOG[key];
 	return entry ? entry[mode] : "";

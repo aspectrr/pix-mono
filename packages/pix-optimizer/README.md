@@ -44,7 +44,7 @@ Switch the style live from the **`/optimizer` overlay** — a fifth `icons` row
 at the bottom cycles `nerd → unicode → ascii` with `←→`; the choice persists to
 `~/.pi/agent/optimizer.json`.
 
-Icons follow the **global** `pix-pretty` mode — set via `/pretty` or `PRETTY_ICONS`
+Icons follow the **global** `pix-pretty` mode — set via `/pix` or `PRETTY_ICONS`
 env var. The optimizer no longer has its own toggle.
 
 ## Features

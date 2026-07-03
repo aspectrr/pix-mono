@@ -29,7 +29,7 @@ function resolvePrettyTheme(agentDir?: string): BundledTheme {
 	// Precedence: env → pix.json → settings.json → default
 	return (
 		(process.env.PRETTY_THEME as BundledTheme | undefined) ??
-		(pixConfig().pretty.theme as BundledTheme) ??
+		(pixConfig().pretty.syntaxTheme as BundledTheme) ??
 		readThemeFromSettings(agentDir) ??
 		DEFAULT_THEME
 	);

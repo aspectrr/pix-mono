@@ -9,9 +9,10 @@ consume. It does not register user-facing tools itself — the tool renderers
 (`pix-read`, `pix-bash`, `pix-ls`, `pix-find`, `pix-grep`, `pix-edit`,
 `pix-write`) import from it. The extension entry point (`src/index.ts`) only
 initializes the syntax-highlight theme from Pi settings, clears the highlight
-cache, registers the `/pretty` icon-style switch, and registers two FFF slash
+cache, seeds the icon mode from `pix.json`, and registers two FFF slash
 commands (`/fff-health`, `/fff-rescan`) once `pix-grep` has brought the FFF
-finder online. (Activated by `pix-core`; not a standalone extension.)
+finder online. The `/pix` settings command lives in `pix-data`.
+(Activated by `pix-core`; not a standalone extension.)
 
 ### Rendering
 
@@ -33,12 +34,12 @@ problem on terminals without a Nerd Font, becomes a one-file edit here.
   mode. Modes: `nerd` (Nerd Font PUA, default), `unicode` (standard BMP glyphs,
   no patched font needed), `ascii` (plain letters). Also `iconFor(key, mode)`,
   `getIconMode()`, `setIconMode()`, `ICON_KEYS`, `ICON_MODES`.
-- **`./icon-persist`** — stores the mode in `~/.pi/agent/pretty.json`;
-  `initIconMode()` applies it on load.
-- **`/pretty`** — the single switch: an overlay that previews each mode's
-  glyphs live and persists the choice. One global knob governs every pix-*
-  package (footer, paste chips, model picker, welcome banner, optimizer cell).
-  Seeded from `PRETTY_ICONS` (`none`/`off` → `ascii`) when no choice is saved.
+- **`./icon-persist`** — reads/writes the icon mode via `pix.json`
+  (`pretty.icons`); `initIconMode()` applies it on load.
+- **`/pix`** (in `pix-data`) — unified settings overlay that includes the icon
+  mode switch. One global knob governs every pix-* package (footer, paste
+  chips, model picker, welcome banner, optimizer cell). Seeded from
+  `PRETTY_ICONS` (`none`/`off` → `ascii`) when no choice is saved.
 
 ### Shared overlay
 
@@ -70,7 +71,7 @@ Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file h
 ```jsonc
 {
   "pretty": {
-    "theme": "monokai",       // syntax-highlight theme
+    "syntaxTheme": "monokai",       // syntax-highlight theme
     "icons": "nerd",          // nerd | unicode | ascii
     "maxPreviewLines": 50,
     "diffColors": true
@@ -85,8 +86,9 @@ Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file h
 - `PRETTY_MAX_PREVIEW_LINES` — max lines in preview output
 - `PRETTY_CACHE_LIMIT` — FFF cache size limit
 - `PRETTY_ICONS` — default icon mode when none is persisted: `nerd` (default),
-  `unicode`, `ascii`, or `none`/`off` (→ `ascii`). Overridden by `/pretty`.
+  `unicode`, `ascii`, or `none`/`off` (→ `ascii`).
   Note: this seeds the file-icon helpers AND the semantic icon catalog.
+  Overridden by the `/pix` settings command.
 - `PRETTY_MAX_RENDER_LINES` — max lines in edit/write diff render (default: 150)
 - `PRETTY_FFF_DIR` — override FFF state dir (default: `~/.cache/pi/fff`)
 

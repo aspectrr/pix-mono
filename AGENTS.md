@@ -129,7 +129,7 @@ icon("cwd")           // resolves glyph for active mode (nerd/unicode/ascii)
 ```
 
 - Keys are semantic roles (`"model"`, `"cwd"`, `"paste.image"`), never glyph names.
-- `PRETTY_ICONS` env seeds default; `/pretty` switches live (persisted to `~/.pi/agent/pretty.json`).
+- `PRETTY_ICONS` env seeds default; `/pix` settings command switches live (persisted to `~/.pi/agent/pix.json`).
 - New icons → add to `CATALOG` in `packages/pix-pretty/src/icon-catalog.ts` with all three variants.
 
 ---

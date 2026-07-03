@@ -154,8 +154,9 @@ pix-data hosts the **single shared config file** consumed by every `pix-*` packa
 
   // Rendering options (pix-pretty)
   "pretty": {
-    "theme": "monokai",       // syntax-highlight theme (overrides PRETTY_THEME)
+    "syntaxTheme": "monokai",       // syntax-highlight theme (overrides PRETTY_THEME)
     "icons": "nerd",          // icon mode: nerd | unicode | ascii (overrides PRETTY_ICONS)
+    "lsStyle": "grid",        // ls output layout: "grid" (horizontal) | "tree" (vertical)
     "maxPreviewLines": 50,    // overrides PRETTY_MAX_PREVIEW_LINES
     "diffColors": true        // colored diff output
   },

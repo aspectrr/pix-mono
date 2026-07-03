@@ -23,7 +23,7 @@ import { type OptimizerHandle, OptimizerStatus, type OptimizerTool } from "./sta
 import { filterModelWarnings } from "./tool-result-filter.ts";
 
 export default function optimizer(pi: ExtensionAPI) {
-	// Icons follow the global pix-pretty mode (set via /pretty); no local state.
+	// Icons follow the global pix-pretty mode (set via /pix); no local state.
 	const status = new OptimizerStatus();
 
 	// Each module registers its own lifecycle hooks and returns a handle the
