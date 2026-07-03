@@ -69,3 +69,183 @@ describe("thinking level validation", () => {
 		expect(plain?.warnings).toBeUndefined();
 	});
 });
+
+// ── run_in_background frontmatter ───────────────────────────────────────────
+
+describe("run_in_background is no longer a config field", () => {
+	test("run_in_background frontmatter does NOT set runInBackground on config", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "bg.md"),
+			"---\ndescription: tries to set bg\nrun_in_background: true\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		const bg = agents.get("bg");
+		expect(bg).toBeDefined();
+		// The field should NOT exist on the returned config
+		expect("runInBackground" in bg!).toBe(false);
+	});
+
+	test("run_in_background: false frontmatter also does NOT set runInBackground", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "fg.md"),
+			"---\ndescription: tries fg\nrun_in_background: false\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		const fg = agents.get("fg");
+		expect(fg).toBeDefined();
+		expect("runInBackground" in fg!).toBe(false);
+	});
+});
+
+// ── additional frontmatter fields ───────────────────────────────────────────
+
+describe("additional frontmatter parsing", () => {
+	test("max_turns is parsed as number", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "limited.md"),
+			"---\nmax_turns: 15\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("limited")?.maxTurns).toBe(15);
+	});
+
+	test("extensions: false disables extensions", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "noext.md"),
+			"---\nextensions: false\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("noext")?.extensions).toBe(false);
+	});
+
+	test("extensions: CSV list parsed correctly", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "selext.md"),
+			"---\nextensions: mcp, lsp\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("selext")?.extensions).toEqual(["mcp", "lsp"]);
+	});
+
+	test("isolated: true is parsed", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "iso.md"),
+			"---\nisolated: true\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("iso")?.isolated).toBe(true);
+	});
+
+	test("inherit_context: true is parsed", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "ctx.md"),
+			"---\ninherit_context: true\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("ctx")?.inheritContext).toBe(true);
+	});
+
+	test("prompt_mode: append is parsed (default is replace)", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "app.md"),
+			"---\nprompt_mode: append\n---\nprompt",
+		);
+		writeFileSync(
+			join(cwd, ".pi", "agents", "rep.md"),
+			"---\nprompt_mode: replace\n---\nprompt",
+		);
+		writeFileSync(
+			join(cwd, ".pi", "agents", "def.md"),
+			"---\ndescription: default\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("app")?.promptMode).toBe("append");
+		expect(agents.get("rep")?.promptMode).toBe("replace");
+		expect(agents.get("def")?.promptMode).toBe("replace"); // default
+	});
+
+	test("enabled: false disables agent", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "off.md"),
+			"---\nenabled: false\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("off")?.enabled).toBe(false);
+	});
+
+	test("disallowed_tools CSV is parsed", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "deny.md"),
+			"---\ndisallowed_tools: bash, edit\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("deny")?.disallowedTools).toEqual(["bash", "edit"]);
+	});
+
+	test("source is set to 'project' for .pi/agents/", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "src.md"),
+			"---\ndescription: test\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.get("src")?.source).toBe("project");
+	});
+
+	test("ext: selectors in tools CSV are separated from builtin names", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(
+			join(cwd, ".pi", "agents", "mixed.md"),
+			"---\ntools: read, grep, ext:mcp, ext:mcp/list_tools\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		const mixed = agents.get("mixed")!;
+		expect(mixed.builtinToolNames).toEqual(["read", "grep"]);
+		expect(mixed.extSelectors).toEqual(["ext:mcp", "ext:mcp/list_tools"]);
+	});
+});
+
+// ── edge cases ───────────────────────────────────────────────────────────
+
+describe("edge cases", () => {
+	test("non-existent .pi/agents dir → empty map", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		const agents = loadCustomAgents(cwd);
+		expect(agents.size).toBe(0);
+	});
+
+	test("non-.md files are ignored", () => {
+		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
+		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
+		writeFileSync(join(cwd, ".pi", "agents", "notes.txt"), "not an agent");
+		writeFileSync(
+			join(cwd, ".pi", "agents", "real.md"),
+			"---\ndescription: real agent\n---\nprompt",
+		);
+		const agents = loadCustomAgents(cwd);
+		expect(agents.has("notes")).toBe(false);
+		expect(agents.has("real")).toBe(true);
+	});
+});
