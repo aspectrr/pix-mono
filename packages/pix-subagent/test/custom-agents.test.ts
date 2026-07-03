@@ -1,9 +1,33 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadCustomAgents } from "../src/custom-agents.ts";
 import type { AgentConfig } from "../src/types.ts";
+
+// ── env isolation ─────────────────────────────────────────────────────────────
+// loadCustomAgents() scans the global dir ($PI_CODING_AGENT_DIR/agents/) in
+// addition to the project dir. Without isolation, any .md files a developer
+// has in ~/.pi/agent/agents/ bleed into tests that assert on agents.size or
+// specific absence of agents — making the suite flaky across environments.
+// Point the env var at an empty temp dir for every test so the global scan
+// is deterministic.
+let savedEnvAgentDir: string | undefined;
+let emptyGlobalDir: string;
+
+beforeEach(() => {
+	savedEnvAgentDir = process.env.PI_CODING_AGENT_DIR;
+	emptyGlobalDir = mkdtempSync(join(tmpdir(), "pixsa-global-"));
+	process.env.PI_CODING_AGENT_DIR = emptyGlobalDir;
+});
+
+afterEach(() => {
+	if (savedEnvAgentDir !== undefined) {
+		process.env.PI_CODING_AGENT_DIR = savedEnvAgentDir;
+	} else {
+		delete process.env.PI_CODING_AGENT_DIR;
+	}
+});
 
 test("loads a project .pi/agents/*.md with frontmatter", () => {
 	const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
