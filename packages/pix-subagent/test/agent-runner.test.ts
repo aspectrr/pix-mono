@@ -216,7 +216,8 @@ describe("parseExtSelectors", () => {
 	test("multiple selectors for same ext → narrowing accumulates", () => {
 		const result = parseExtSelectors(["ext:foo/bar", "ext:foo/baz"]);
 		expect(result.extNames.has("foo")).toBe(true);
-		const narrow = result.narrowing.get("foo")!;
+		const narrow = result.narrowing.get("foo");
+		if (!narrow) throw new Error("expected narrowing for 'foo'");
 		expect(narrow.has("bar")).toBe(true);
 		expect(narrow.has("baz")).toBe(true);
 	});

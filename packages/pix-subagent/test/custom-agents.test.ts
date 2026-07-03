@@ -106,9 +106,9 @@ describe("run_in_background is no longer a config field", () => {
 		);
 		const agents = loadCustomAgents(cwd);
 		const bg = agents.get("bg");
-		expect(bg).toBeDefined();
+		if (!bg) throw new Error("expected 'bg' agent to exist");
 		// The field should NOT exist on the returned config
-		expect("runInBackground" in bg!).toBe(false);
+		expect("runInBackground" in bg).toBe(false);
 	});
 
 	test("run_in_background: false frontmatter also does NOT set runInBackground", () => {
@@ -120,8 +120,8 @@ describe("run_in_background is no longer a config field", () => {
 		);
 		const agents = loadCustomAgents(cwd);
 		const fg = agents.get("fg");
-		expect(fg).toBeDefined();
-		expect("runInBackground" in fg!).toBe(false);
+		if (!fg) throw new Error("expected 'fg' agent to exist");
+		expect("runInBackground" in fg).toBe(false);
 	});
 });
 
@@ -245,7 +245,8 @@ describe("additional frontmatter parsing", () => {
 			"---\ntools: read, grep, ext:mcp, ext:mcp/list_tools\n---\nprompt",
 		);
 		const agents = loadCustomAgents(cwd);
-		const mixed = agents.get("mixed")!;
+		const mixed = agents.get("mixed");
+		if (!mixed) throw new Error("expected 'mixed' agent to exist");
 		expect(mixed.builtinToolNames).toEqual(["read", "grep"]);
 		expect(mixed.extSelectors).toEqual(["ext:mcp", "ext:mcp/list_tools"]);
 	});

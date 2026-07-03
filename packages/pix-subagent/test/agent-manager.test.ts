@@ -354,8 +354,8 @@ describe("AgentManager", () => {
 		const record = await resumed;
 
 		expect(record).toBeDefined();
-		expect(record!.status).toBe("completed");
-		expect(record!.result).toBe("resumed output");
+		expect(record?.status).toBe("completed");
+		expect(record?.result).toBe("resumed output");
 	});
 
 	test("resume() sets error status on rejection", async () => {
@@ -376,8 +376,8 @@ describe("AgentManager", () => {
 		const record = await resumed;
 
 		expect(record).toBeDefined();
-		expect(record!.status).toBe("error");
-		expect(record!.error).toBe("resume failed");
+		expect(record?.status).toBe("error");
+		expect(record?.error).toBe("resume failed");
 	});
 
 	// ── hasRunning ──────────────────────────────────────────────────────────
@@ -670,7 +670,8 @@ describe("AgentManager", () => {
 		});
 
 		// Record exists but session isn't created yet — steer should queue
-		const record = manager.getRecord(id)!;
+		const record = manager.getRecord(id);
+		if (!record) throw new Error("expected record to exist");
 		record.session = undefined; // force no session state
 		record.pendingSteers = ["redirect to X", "also check Y"];
 
@@ -738,7 +739,8 @@ describe("AgentManager", () => {
 		});
 		const after = Date.now();
 
-		const record = manager.getRecord(id)!;
+		const record = manager.getRecord(id);
+		if (!record) throw new Error("expected record to exist");
 		expect(record.type).toBe("general-purpose");
 		expect(record.description).toBe("my task");
 		expect(record.status).toBe("running");
@@ -772,7 +774,8 @@ describe("AgentManager", () => {
 		await new Promise((r) => setTimeout(r, 10));
 		const after = Date.now();
 
-		const record = manager.getRecord(id)!;
+		const record = manager.getRecord(id);
+		if (!record) throw new Error("expected record to exist");
 		expect(record.status).toBe("completed");
 		expect(record.result).toBe("the answer");
 		expect(record.completedAt).toBeGreaterThanOrEqual(before);
