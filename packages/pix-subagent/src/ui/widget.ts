@@ -236,7 +236,9 @@ export class AgentWidget {
 		theme: Theme,
 	): string[] {
 		const allAgents = this.manager.listAgents();
-		const running = allAgents.filter((a) => a.status === "running");
+		// Only show background running agents — foreground agents already have
+		// a live inline transcript line, so duplicating them here is noise.
+		const running = allAgents.filter((a) => a.status === "running" && a.isBackground);
 		const queued = allAgents.filter((a) => a.status === "queued");
 		const finished = allAgents.filter(
 			(a) =>
@@ -371,7 +373,9 @@ export class AgentWidget {
 		let queuedCount = 0;
 		let hasFinished = false;
 		for (const a of allAgents) {
-			if (a.status === "running") runningCount++;
+			// Only count background running agents — foreground ones show
+			// progress inline in the transcript, not in the widget.
+			if (a.status === "running" && a.isBackground) runningCount++;
 			else if (a.status === "queued") queuedCount++;
 			else if (
 				a.completedAt != null &&
