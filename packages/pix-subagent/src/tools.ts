@@ -147,6 +147,25 @@ export function formatSpeed(outputTokens: number, durationMs: number): string {
 	return `${Math.round(outputTokens / (durationMs / 1000))} t/s`;
 }
 
+/** Render the agent call header and its task prompt in the transcript. */
+export function formatAgentCall(args: Record<string, unknown>, theme: Theme): string {
+	const typeName = resolveTypeName(args);
+	const displayName = typeName ? getConfig(typeName).displayName : "Agent";
+	const description = typeof args.description === "string" ? args.description : "";
+	const model = typeof args.model === "string" ? args.model : "";
+	const prompt = typeof args.prompt === "string" ? args.prompt : "";
+	const modelStr = model ? ` ${theme.fg("muted", `[${model}]`)}` : "";
+	const header =
+		"▸ " +
+		theme.fg("toolTitle", theme.bold(displayName)) +
+		modelStr +
+		(description ? `  ${theme.fg("muted", description)}` : "");
+
+	// renderCall replaces Pi's default argument renderer. Keep the prompt here so
+	// blocking foreground calls retain their only task context in the transcript.
+	return prompt ? `${header}\n${theme.fg("dim", JSON.stringify(prompt))}` : header;
+}
+
 // ── Activity description (shared with ui/widget.ts) ──────────────────────────
 
 export const TOOL_DISPLAY: Record<string, string> = {
@@ -327,18 +346,7 @@ export function createAgentTool(
 		}),
 
 		renderCall(args, theme) {
-			const typeName = resolveTypeName(args);
-			const displayName = typeName ? getConfig(typeName).displayName : "Agent";
-			const desc = args.description ?? "";
-			const modelStr = args.model ? ` ${theme.fg("muted", `[${args.model}]`)}` : "";
-			return new Text(
-				"▸ " +
-					theme.fg("toolTitle", theme.bold(displayName)) +
-					modelStr +
-					(desc ? `  ${theme.fg("muted", desc as string)}` : ""),
-				0,
-				0,
-			);
+			return new Text(formatAgentCall(args as Record<string, unknown>, theme), 0, 0);
 		},
 
 		renderResult(result, { expanded, isPartial }, theme) {

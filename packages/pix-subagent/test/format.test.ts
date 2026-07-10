@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import {
 	fmtTokenCount,
+	formatAgentCall,
 	formatContext,
 	formatMs,
 	formatTokens,
@@ -9,6 +10,21 @@ import {
 	formatTurns,
 } from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
+
+test("formatAgentCall includes the task prompt below its header", () => {
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const rendered = formatAgentCall(
+		{
+			type: "general-purpose",
+			description: "Audit recording dead code",
+			prompt: "here",
+			background: false,
+		},
+		theme,
+	);
+
+	expect(rendered).toBe('▸ Agent  Audit recording dead code\n"here"');
+});
 
 test("formatTokens < 1k", () => {
 	// nerd-mode default: nf-md-file-document-outline (U+F027F) + space
