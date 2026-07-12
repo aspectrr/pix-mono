@@ -220,13 +220,24 @@ function renderModel(
 const stripAnsi = (s: string): string => s.replace(/\x1b\[[0-9;]*m/g, "");
 
 /** Replace verbose status text with icon + value. */
-function compactStatus(key: string, value: string, theme: Theme): string {
+export function compactStatus(key: string, value: string, theme: Theme): string {
 	const raw = stripAnsi(value);
 	switch (key) {
 		case "pi-lens-lsp": {
-			const m = raw.match(/LSP Active \((\d+)\)/);
-			if (m) return theme.fg("success", `${icon("lsp")}  ${m[1]}`);
-			if (/LSP Inactive/.test(raw)) return theme.fg("error", `${icon("lsp")}  off`);
+			const legacyCount = raw.match(/LSP Active \((\d+)\)/)?.[1];
+			const activeList = raw.match(/LSP Active:\s*([^·]+)/)?.[1];
+			const failedList = raw.match(/LSP Failed:\s*([^·]+)/)?.[1];
+			const count = (list: string | undefined) =>
+				list ? list.split(",").filter((id) => id.trim().length > 0).length : 0;
+			const activeCount = legacyCount ? Number(legacyCount) : count(activeList);
+			const failedCount = count(failedList);
+			if (activeCount > 0)
+				return theme.fg(
+					"success",
+					`${icon("lsp")}  ${activeCount}${failedCount > 0 ? ` !${failedCount}` : ""}`,
+				);
+			if (failedCount > 0) return theme.fg("error", `${icon("lsp")}  !${failedCount}`);
+			if (/LSP Inactive/.test(raw)) return theme.fg("dim", `${icon("lsp")}  off`);
 			return value;
 		}
 		case "mcp": {
