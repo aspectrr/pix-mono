@@ -14,7 +14,7 @@ export type { LifetimeUsage, ThinkingLevel };
 /** Agent type: any string name (built-in defaults or user-defined). */
 export type SubagentType = string;
 
-/** Names of the three embedded default agents. */
+/** Names of the four embedded default agents. */
 export const DEFAULT_AGENT_NAMES = ["general-purpose", "Explore", "Plan", "Mentor"] as const;
 
 /** Unified agent configuration — used for both default and user-defined agents. */

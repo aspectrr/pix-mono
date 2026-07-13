@@ -1,6 +1,6 @@
 # @xynogen/pix-subagent
 
-Pi extension — planner-driven sub-agents with 3 tools, live widget (model always visible), and explicit work-splitting.
+Pi extension — planner-driven sub-agents with 4 tools, live widget (model always visible), and explicit work-splitting.
 
 ## Install
 
@@ -16,11 +16,12 @@ pi install npm:@xynogen/pix-subagent
 
 ## What it does
 
-Gives the parent agent (planner) three tools to delegate work to isolated child sessions:
+Gives the parent agent (planner) four tools to delegate work to isolated child sessions:
 
 | Tool | Purpose |
 |---|---|
 | `agent` | Spawn a background sub-agent |
+| `agent_info` | Discover current agent types or available models |
 | `agent_result` | Fetch latest output / full conversation by ID |
 | `agent_steer` | Inject a message into a running background agent |
 
@@ -42,20 +43,30 @@ Gives the parent agent (planner) three tools to delegate work to isolated child 
 ```
 prompt           string    Self-contained task description
 description      string    3-5 words, shown in widget
-subagent_type    string    Agent type (see available types in tool description)
-model?           string    "provider/id" or fuzzy ("haiku") — from the live model list
+type             string    Agent type (discover with agent_info)
+model?           string    "provider/id" or fuzzy ("haiku"); omit to inherit
 allowed_tools?   string[]  Restrict child's tools (intersected, never widens)
 thinking?        string    off|minimal|low|medium|high|xhigh
-max_turns?       number    Omit for unlimited
+turns?           number    Omit for unlimited
 resume?          string    Agent ID to continue
 background?      boolean   Default true (non-blocking); false waits for an inline result
 ```
 
-**Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline.
+**Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline. The initial task prompt is shown in the tool card, then hidden after the shared `collapse.delaySec` threshold; set `collapse.tools.agent` to `false` to keep it visible.
 
 **`allowed_tools[]`** is the work-splitting hook. Pass `["read","grep","find"]` to scope an Explore agent to read-only ops. The list is intersected with the agent type's default set — it can only narrow, never widen.
 
-**`model`** accepts `"provider/id"` or fuzzy strings like `"haiku"`, `"sonnet"`. The live list of available models (those with auth configured) is injected into the tool description so the planner can pick correctly. Unknown → error returned to planner to re-pick.
+**`model`** accepts `"provider/id"` or fuzzy strings like `"haiku"`, `"sonnet"`. The recurring tool description does not embed the live model catalog; use `agent_info(kind: "models")` to inspect it on demand. An unknown explicit model also returns the currently available models. Omit `model` to inherit the parent model.
+
+### `agent_info` — discover types or models
+
+```text
+kind      "types" | "models"
+query?    string   Optional text filter
+limit?    number   Default 20, maximum 50
+```
+
+`kind: "types"` reads the live built-in and custom-agent registry, including each type's description and tool belt. `kind: "models"` combines the authenticated runtime model registry with pix-data benchmark, context, price, and tier metadata. This keeps volatile catalogs out of every prompt while retaining informed model selection.
 
 ### `agent_result` — fetch result
 

@@ -37,6 +37,7 @@ import type { SubagentType, ThinkingLevel } from "./types.ts";
  */
 export const SUBAGENT_TOOL_NAMES = {
 	AGENT: "agent",
+	INFO: "agent_info",
 	GET_RESULT: "agent_result",
 	STEER: "agent_steer",
 } as const;

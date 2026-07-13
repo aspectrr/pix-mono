@@ -1,17 +1,83 @@
 import { expect, test } from "bun:test";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import { registerAgents } from "../src/agent-types.ts";
+import type { ModelRegistry } from "../src/model-resolver.ts";
 import {
+	agentTypeGuidance,
+	buildAgentToolDescription,
+	describeParentModel,
 	fmtTokenCount,
 	formatAgentCall,
+	formatAgentCompletedLine,
 	formatContext,
 	formatMs,
 	formatTokens,
 	formatToolUses,
 	formatTurns,
+	listAgentModels,
+	listAgentTypes,
 } from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
 
-test("formatAgentCall includes the task prompt below its header", () => {
+test("agent description delegates volatile catalogs to agent_info", () => {
+	const description = buildAgentToolDescription();
+
+	expect(description).toContain("agent_info");
+	expect(description).toContain("omit model to inherit");
+	expect(description).not.toContain("Custom agents:");
+	expect(description).not.toContain("Types:");
+	expect(description.length).toBeLessThan(200);
+});
+
+test("agent type discovery explains dynamic custom-agent locations", () => {
+	const guidance = agentTypeGuidance();
+
+	expect(guidance).toContain("Custom agents: .pi/agents/*.md");
+	expect(guidance).toContain("/agents/*.md (project overrides global)");
+});
+
+test("agent type discovery filters runtime agents on demand", () => {
+	registerAgents(
+		new Map([
+			[
+				"SecurityReview",
+				{
+					name: "SecurityReview",
+					description: "Review authentication and authorization risks.",
+					builtinToolNames: ["read", "grep"],
+					extensions: false,
+					skills: false,
+					systemPrompt: "",
+					promptMode: "append" as const,
+				},
+			],
+		]),
+	);
+
+	const lines = listAgentTypes("authorization", 5);
+	expect(lines).toHaveLength(1);
+	expect(lines[0]).toContain("SecurityReview");
+	expect(lines[0]).toContain("tools:read,grep");
+	registerAgents(new Map());
+});
+
+test("agent model discovery filters and limits enriched available models", () => {
+	const models = [
+		{ provider: "test", id: "alpha-fast", name: "Alpha Fast" },
+		{ provider: "test", id: "beta-strong", name: "Beta Strong" },
+	] as never[];
+	const registry = {
+		getAvailable: () => models,
+		getAll: () => models,
+		find: () => undefined,
+	} as ModelRegistry;
+
+	expect(listAgentModels(registry, "alpha", 1)).toEqual(["test/alpha-fast"]);
+	expect(listAgentModels(registry, undefined, 1)).toHaveLength(1);
+	expect(describeParentModel(registry, models[0])).toBe("test/alpha-fast");
+});
+
+test("formatAgentCall includes the task prompt before auto-collapse", () => {
 	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
 	const rendered = formatAgentCall(
 		{
@@ -24,6 +90,40 @@ test("formatAgentCall includes the task prompt below its header", () => {
 	);
 
 	expect(rendered).toBe('▸ Agent  Audit recording dead code\n"here"');
+});
+
+test("formatAgentCall hides the task prompt after auto-collapse", () => {
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const rendered = formatAgentCall(
+		{
+			type: "general-purpose",
+			description: "Audit recording dead code",
+			prompt: "here",
+			background: true,
+		},
+		theme,
+		false,
+	);
+
+	expect(rendered).toBe("▸ Agent  Audit recording dead code");
+});
+
+test("formatAgentCompletedLine keeps the completed agent row visible", () => {
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const rendered = formatAgentCompletedLine(
+		{
+			displayName: "Agent",
+			description: "Audit recording dead code",
+			subagentType: "general-purpose",
+			toolUses: 0,
+			context: "",
+			durationMs: 250,
+			status: "completed",
+		},
+		theme,
+	);
+
+	expect(rendered).toBe("  ✓ Agent · Audit recording dead code · 0.3s");
 });
 
 test("formatTokens < 1k", () => {

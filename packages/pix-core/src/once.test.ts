@@ -168,7 +168,7 @@ describe("member factory dedupe (pix-subagent)", () => {
 		const { pi, toolNames } = makeHost();
 		registerSubagent(pi);
 		registerSubagent(pi);
-		expect(toolNames).toEqual(["agent", "agent_result", "agent_steer"]);
+		expect(toolNames).toEqual(["agent_info", "agent", "agent_result", "agent_steer"]);
 	});
 
 	it("registers agent tools again for a fresh pi instance (/new rehydration)", () => {
@@ -176,7 +176,7 @@ describe("member factory dedupe (pix-subagent)", () => {
 		const { pi: pi2, toolNames: tools2 } = makeHost();
 		registerSubagent(pi1);
 		registerSubagent(pi2);
-		expect(tools1).toEqual(["agent", "agent_result", "agent_steer"]);
-		expect(tools2).toEqual(["agent", "agent_result", "agent_steer"]);
+		expect(tools1).toEqual(["agent_info", "agent", "agent_result", "agent_steer"]);
+		expect(tools2).toEqual(["agent_info", "agent", "agent_result", "agent_steer"]);
 	});
 });

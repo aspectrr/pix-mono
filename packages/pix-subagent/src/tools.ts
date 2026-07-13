@@ -1,11 +1,12 @@
 /**
- * tools.ts — The 3 LLM-callable tool definitions:
+ * tools.ts — The 4 LLM-callable tool definitions:
  *   agent          — spawn a sub-agent (fg or bg)
+ *   agent_info     — discover available types or models on demand
  *   agent_result   — fetch latest output / full result by id
  *   agent_steer    — steer or force-stop a running bg agent
  *
  * Design notes:
- * - agent description is built dynamically at registration (live model + type list).
+ * - volatile model/type catalogs live behind agent_info, not the agent schema.
  * - allowed_tools[] intersects the resolved tool set (never widens).
  * - modelName is ALWAYS populated (the pix twist — shown even when same as parent).
  * - renderCall/renderResult ported from tintinweb/pi-subagents (MIT).
@@ -22,13 +23,19 @@
 import { defineTool, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { lookupBenchmark } from "@xynogen/pix-data";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import { Type } from "typebox";
 import type { AgentManager } from "./agent-manager.ts";
 import { getAgentConversation, normalizeMaxTurns, SUBAGENT_TOOL_NAMES } from "./agent-runner.ts";
 import { BUILTIN_TOOL_NAMES, getAgentConfig, getAvailableTypes, getConfig } from "./agent-types.ts";
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
-import { resolveModel } from "./model-resolver.ts";
+import {
+	listAvailable,
+	type ModelEntry,
+	type ModelRegistry,
+	resolveModel,
+} from "./model-resolver.ts";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
 import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "./usage.ts";
 
@@ -147,8 +154,12 @@ export function formatSpeed(outputTokens: number, durationMs: number): string {
 	return `${Math.round(outputTokens / (durationMs / 1000))} t/s`;
 }
 
-/** Render the agent call header and its task prompt in the transcript. */
-export function formatAgentCall(args: Record<string, unknown>, theme: Theme): string {
+/** Render the agent call header and, until auto-collapse, its task prompt. */
+export function formatAgentCall(
+	args: Record<string, unknown>,
+	theme: Theme,
+	showPrompt = true,
+): string {
 	const typeName = resolveTypeName(args);
 	const displayName = typeName ? getConfig(typeName).displayName : "Agent";
 	const description = typeof args.description === "string" ? args.description : "";
@@ -161,9 +172,9 @@ export function formatAgentCall(args: Record<string, unknown>, theme: Theme): st
 		modelStr +
 		(description ? `  ${theme.fg("muted", description)}` : "");
 
-	// renderCall replaces Pi's default argument renderer. Keep the prompt here so
-	// blocking foreground calls retain their only task context in the transcript.
-	return prompt ? `${header}\n${theme.fg("dim", JSON.stringify(prompt))}` : header;
+	// renderCall replaces Pi's default argument renderer. Initially retain the
+	// task context, then let the shared pix collapse timer reduce it to the header.
+	return showPrompt && prompt ? `${header}\n${theme.fg("dim", JSON.stringify(prompt))}` : header;
 }
 
 // ── Activity description (shared with ui/widget.ts) ──────────────────────────
@@ -234,119 +245,157 @@ function buildStats(d: AgentDetails, theme: Theme): string {
 	return parts.join(` ${theme.fg("dim", "·")} `);
 }
 
-// ── tool description builder ─────────────────────────────────────────────────
+/** Keep agent identity and completion stats visible after the prompt is hidden. */
+export function formatAgentCompletedLine(d: AgentDetails, theme: Theme): string {
+	const parts: string[] = [];
+	if (d.description) parts.push(theme.fg("muted", d.description));
+	const stats = buildStats(d, theme);
+	if (stats) parts.push(stats);
+	parts.push(theme.fg("dim", formatMs(d.durationMs)));
+	const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
+	if (speed) parts.push(theme.fg("dim", speed));
+	if (d.status === "steered") parts.push(theme.fg("dim", "(turn limit)"));
 
-export function buildAgentToolDescription(modelList: string[]): string {
-	const available = getAvailableTypes();
-
-	const typeList = available
-		.map((name) => {
-			const cfg = getAgentConfig(name);
-			const tools = cfg?.builtinToolNames;
-			const toolsSuffix =
-				!tools || tools.length === BUILTIN_TOOL_NAMES.length
-					? " (Tools: *)"
-					: ` (Tools: ${tools.join(", ")})`;
-			return `- ${name}: ${cfg?.description ?? name}${toolsSuffix}`;
-		})
-		.join("\n");
-
-	const modelsText =
-		modelList.length > 0 ? `\nAvailable models:\n${modelList.map((m) => `  ${m}`).join("\n")}` : "";
-
-	const toolsText = `\nAvailable tools (for allowed_tools[]): ${BUILTIN_TOOL_NAMES.join(", ")}`;
-
-	return `Launch a new agent to handle complex, multi-step tasks autonomously.
-
-Available agent types and their tools:
-${typeList}
-
-Custom agents can be defined in .pi/agents/<name>.md (project) or ${getAgentDir()}/agents/<name>.md (global) — picked up automatically. Project-level overrides global.
-${modelsText}
-${toolsText}
-
-## When not to use
-If the target is already known, use a direct tool — \`read\` for a known path, \`grep\`/\`find\` for a specific symbol. Reserve this tool for open-ended questions or tasks that span the codebase.
-
-## Usage notes
-- Always include a short (3-5 word) \`description\` (shown in UI).
-- Launch independent agents concurrently: send multiple \`agent\` tool calls in one message.
-- The agent's result is not visible to the user — summarize it in a text message. Trust but verify: check the actual changes before reporting done.
-- Agents run in **background** by default: the tool returns immediately and automatically delivers the result when the agent finishes. Use this for independent work; do NOT poll or sleep-wait.
-- **Foreground** (\`background: false\`): the tool blocks until the agent finishes and returns its result inline. Use it only when the result is required before proceeding (e.g. Plan or Explore before editing).
-- \`agent_result\` is only needed to re-read a past background result or get verbose conversation history — never to wait.
-- \`resume\` with an agent ID to continue a prior agent's work; \`agent_steer\` to redirect a running background agent or force-stop it (action: 'stop').
-- Pick the model yourself via \`model:\` (provider/id or fuzzy e.g. "haiku"). For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent. Type sets the tool belt + persona only — never the model.
-- \`thinking\`: off|minimal|low|medium|high|xhigh.
-- Only \`general-purpose\` has an open tool belt — use \`allowed_tools\` to narrow it. Explore/Plan and custom agents already have a fixed belt; omit \`allowed_tools\` for those.
-
-## Writing the prompt
-Brief it like a smart colleague who just walked into the room — it hasn't seen this conversation. Include what to accomplish, why, file paths, line numbers, what specifically to change, and whether a short response is fine. **Never delegate understanding.**`;
+	return (
+		`  ${theme.fg("success", "✓")} ${theme.fg("toolTitle", theme.bold(d.displayName))}` +
+		(parts.length > 0 ? ` ${theme.fg("dim", "·")} ${parts.join(` ${theme.fg("dim", "·")} `)}` : "")
+	);
 }
 
-// ── the 3 tools ──────────────────────────────────────────────────────────────
+// ── compact tool description + on-demand discovery ──────────────────────────
+
+export function buildAgentToolDescription(): string {
+	return "Launch a sub-agent for delegated work. Use direct tools for known tasks. Call agent_info to discover types or models; omit model to inherit the parent.";
+}
+
+export function agentTypeGuidance(): string {
+	return `Pass one type name to agent.type. Custom agents: .pi/agents/*.md or ${getAgentDir()}/agents/*.md (project overrides global).`;
+}
+
+function normalizeQuery(query: unknown): string {
+	return typeof query === "string" ? query.trim().toLocaleLowerCase() : "";
+}
+
+function boundedLimit(limit: unknown): number {
+	return typeof limit === "number" && Number.isFinite(limit)
+		? Math.max(1, Math.min(50, Math.floor(limit)))
+		: 20;
+}
+
+export function listAgentTypes(query?: string, limit = 20): string[] {
+	const needle = normalizeQuery(query);
+	return getAvailableTypes()
+		.map((name) => {
+			const cfg = getAgentConfig(name);
+			const description = (cfg?.description ?? name).replace(/\s+/g, " ").trim();
+			const tools = cfg?.builtinToolNames;
+			return {
+				name,
+				line: `- ${name}: ${description} (tools:${!tools || tools.length === BUILTIN_TOOL_NAMES.length ? "*" : tools.join(",")})`,
+				search: `${name} ${description}`.toLocaleLowerCase(),
+			};
+		})
+		.filter((entry) => !needle || entry.search.includes(needle))
+		.slice(0, boundedLimit(limit))
+		.map((entry) => entry.line);
+}
+
+export function listAgentModels(registry: ModelRegistry, query?: string, limit = 20): string[] {
+	const needle = normalizeQuery(query);
+	return listAvailable(registry)
+		.filter((line) => !needle || line.toLocaleLowerCase().includes(needle))
+		.slice(0, boundedLimit(limit));
+}
+
+export function describeParentModel(registry: ModelRegistry, model?: ModelEntry): string {
+	if (!model) return "unknown";
+	const id = `${model.provider}/${model.id}`;
+	return listAvailable(registry).find((line) => line === id || line.startsWith(`${id}  —`)) ?? id;
+}
+
+export function createAgentInfoTool(reloadCustomAgents: () => void) {
+	return defineTool({
+		name: SUBAGENT_TOOL_NAMES.INFO,
+		label: "Agent Info",
+		description: "List available agent types or models on demand.",
+		parameters: Type.Object({
+			kind: Type.Union([Type.Literal("types"), Type.Literal("models")], {
+				description: "Information to list.",
+			}),
+			query: Type.Optional(Type.String({ description: "Optional text filter." })),
+			limit: Type.Optional(
+				Type.Number({
+					description: "Maximum results (default 20, max 50).",
+					minimum: 1,
+					maximum: 50,
+				}),
+			),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const query = params.query as string | undefined;
+			const limit = boundedLimit(params.limit);
+			if (params.kind === "types") reloadCustomAgents();
+			const lines =
+				params.kind === "models"
+					? listAgentModels(ctx.modelRegistry, query, limit)
+					: listAgentTypes(query, limit);
+			const heading = params.kind === "models" ? "Available models" : "Available agent types";
+			const guidance =
+				params.kind === "models"
+					? "Pass provider/id or a fuzzy name to agent.model; omit model to inherit the parent."
+					: agentTypeGuidance();
+			const parent =
+				params.kind === "models"
+					? `Current parent: ${describeParentModel(ctx.modelRegistry, ctx.model)}\n\n`
+					: "";
+			return textResult(
+				`${parent}${heading}${query ? ` matching “${query}”` : ""}:\n${lines.join("\n") || "(none)"}\n\n${guidance}`,
+			);
+		},
+	});
+}
+
+// ── agent tool ───────────────────────────────────────────────────────────────
 
 export function createAgentTool(
 	pi: Parameters<typeof manager.spawn>[0],
 	manager: AgentManager,
 	agentActivity: Map<string, AgentActivity>,
 	reloadCustomAgents: () => void,
-	modelList: string[],
 ) {
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.AGENT,
 		label: "Agent",
-		description: buildAgentToolDescription(modelList),
+		description: buildAgentToolDescription(),
 		promptSnippet: "Launch autonomous sub-agents for complex multi-step tasks",
 
 		parameters: Type.Object({
-			prompt: Type.String({
-				description: "The task for the agent to perform.",
-			}),
-			description: Type.String({
-				description: "A short (3-5 word) description of the task (shown in UI).",
-			}),
-			type: Type.String({
-				description: `The type of specialized agent to use. Available: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md are also available.`,
-			}),
+			prompt: Type.String({ description: "Self-contained task instructions." }),
+			description: Type.String({ description: "Short 3-5 word UI label." }),
+			type: Type.String({ description: "Agent type; see agent_info(kind:'types')." }),
 			model: Type.Optional(
-				Type.String({
-					description:
-						'Optional model override. Accepts "provider/id" or fuzzy name (e.g. "haiku", "sonnet"). Must be in the available models list.',
-				}),
+				Type.String({ description: "Optional model override; omit to inherit." }),
 			),
 			allowed_tools: Type.Optional(
-				Type.Array(Type.String(), {
-					description: `Restrict the sub-agent to a subset of tools. General-purpose only — other types already have a fixed belt. Intersected with the type's default set (never widens). Available: ${BUILTIN_TOOL_NAMES.join(", ")}. Omit for the type's default set.`,
-				}),
+				Type.Array(Type.String(), { description: "General-purpose tool restriction." }),
 			),
-			thinking: Type.Optional(
-				Type.String({
-					description: "Thinking level: off|minimal|low|medium|high|xhigh.",
-				}),
-			),
+			thinking: Type.Optional(Type.String({ description: "Thinking level." })),
 			turns: Type.Optional(
-				Type.Number({
-					description: "Maximum agentic turns before stopping. Omit for unlimited.",
-					minimum: 1,
-				}),
+				Type.Number({ description: "Maximum turns; omit for unlimited.", minimum: 1 }),
 			),
-			resume: Type.Optional(
-				Type.String({
-					description: "Agent ID to resume from. Continues previous context.",
-				}),
-			),
+			resume: Type.Optional(Type.String({ description: "Agent ID to continue." })),
 			background: Type.Optional(
-				Type.Boolean({
-					default: true,
-					description:
-						"Run in background (non-blocking). Default true. Set false only when the tool must block and return the result inline.",
-				}),
+				Type.Boolean({ description: "Run asynchronously. Default true.", default: true }),
 			),
 		}),
 
-		renderCall(args, theme) {
-			return new Text(formatAgentCall(args as Record<string, unknown>, theme), 0, 0);
+		renderCall(args, theme, renderCtx) {
+			const collapsed = tickCollapse(
+				SUBAGENT_TOOL_NAMES.AGENT,
+				renderCtx.state as CollapseState,
+				renderCtx.invalidate,
+			);
+			return new Text(formatAgentCall(args as Record<string, unknown>, theme, !collapsed), 0, 0);
 		},
 
 		renderResult(result, { expanded, isPartial }, theme) {
@@ -398,30 +447,10 @@ export function createAgentTool(
 				);
 			}
 
-			// Completed / steered. Collapsed view stays empty — the ● Agents widget
-			// carries the full finished line, so the inline transcript doesn't echo
-			// it (caller shouldn't output the result). Expanded view still shows the
-			// summary + full output on demand.
+			// Completed / steered. Keep the one-line identity and summary visible;
+			// auto-collapse hides only the initial prompt, never the whole agent row.
 			if (details.status === "completed" || details.status === "steered") {
-				if (!expanded) return new Text("", 0, 0);
-				const duration = formatMs(details.durationMs);
-				const isSteered = details.status === "steered";
-				const icon = theme.fg("success", "✓");
-				const speed = formatSpeed(
-					details.outputTokens ?? 0,
-					details.streamingMs ?? details.durationMs,
-				);
-				let line =
-					icon +
-					(stats ? ` ${stats}` : "") +
-					" " +
-					theme.fg("dim", "·") +
-					" " +
-					theme.fg("dim", duration) +
-					(speed ? ` ${theme.fg("dim", "·")} ${theme.fg("dim", speed)}` : "") +
-					// Steered = stopped at turn limit; keep that note inline since the
-					// stats alone don't say why it ended.
-					(isSteered ? ` ${theme.fg("dim", "(turn limit)")}` : "");
+				let line = formatAgentCompletedLine(details, theme);
 
 				// Expanded view appends the full result below the one-line summary.
 				if (expanded) {
@@ -788,7 +817,7 @@ export function createAgentResultTool(
 		name: SUBAGENT_TOOL_NAMES.GET_RESULT,
 		label: "Agent Result",
 		description:
-			"Fetch the latest output or full result of a background agent by ID. Call this to retrieve what a background agent produced. Sets resultConsumed so the completion notification is suppressed.\n\nNOTE: You do NOT need to call this to wait for an agent. Results are delivered automatically when agents finish. Only use this to re-read a previous result or get verbose conversation history.",
+			"Retrieve a previous agent result by ID. Results are delivered automatically; do not use this to wait or poll. verbose=true returns full conversation history.",
 		parameters: Type.Object({
 			agent_id: Type.String({
 				description: "The agent ID returned by the agent tool.",
@@ -861,7 +890,7 @@ export function createAgentSteerTool(manager: AgentManager) {
 		name: SUBAGENT_TOOL_NAMES.STEER,
 		label: "Steer Agent",
 		description:
-			"Steer or force-stop a running background agent. action='steer' (default) injects a steering message after the agent's current tool execution completes. action='stop' immediately aborts the agent — use when the agent is stuck, no longer needed, or the user asks to kill it.",
+			"Redirect or stop a running agent. steer delivers a message after its current tool call; stop aborts it immediately.",
 		parameters: Type.Object({
 			agent_id: Type.String({ description: "The agent ID to steer or stop." }),
 			action: Type.Optional(

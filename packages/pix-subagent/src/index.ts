@@ -1,7 +1,7 @@
 /**
  * index.ts — pix-subagent extension entry point.
  *
- * Registers 3 LLM-callable tools (agent, agent_result, agent_steer),
+ * Registers 4 LLM-callable tools (agent, agent_info, agent_result, agent_steer),
  * a live above-editor widget (model shown inline), and a themed
  * subagent-notification renderer.
  *
@@ -15,9 +15,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { AgentManager } from "./agent-manager.ts";
 import { registerAgents } from "./agent-types.ts";
 import { loadCustomAgents } from "./custom-agents.ts";
-import { listAvailable } from "./model-resolver.ts";
 import {
 	type AgentActivity,
+	createAgentInfoTool,
 	createAgentResultTool,
 	createAgentSteerTool,
 	createAgentTool,
@@ -160,42 +160,25 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 	// ── Register renderers ─────────────────────────────────────────────────────
 	registerNotificationRenderer(pi);
 
-	// ── Build initial tool description with model list ─────────────────────────
-	// Model list is empty until session_start provides a modelRegistry.
-	// Tools are registered once; the description is rebuilt on session_start via
-	// re-registering. Verified: pi.registerTool replaces by name (upstream docs:
-	// "Extensions can override built-in tools by registering a tool with the same
-	// name" and tools are "refreshed immediately in the same session").
-	let currentModelList: string[] = [];
-
-	function registerTools() {
-		pi.registerTool(
-			createAgentTool(
-				pi as Parameters<typeof manager.spawn>[0],
-				manager,
-				agentActivity,
-				reloadCustomAgents,
-				currentModelList,
-			),
-		);
-		pi.registerTool(createAgentResultTool(manager, agentActivity));
-		pi.registerTool(createAgentSteerTool(manager));
-	}
-
-	registerTools();
+	// ── Register tools ─────────────────────────────────────────────────────────
+	// Volatile type/model catalogs stay behind agent_info rather than bloating
+	// every prompt. Invalid explicit models still return the live catalog.
+	pi.registerTool(createAgentInfoTool(reloadCustomAgents));
+	pi.registerTool(
+		createAgentTool(
+			pi as Parameters<typeof manager.spawn>[0],
+			manager,
+			agentActivity,
+			reloadCustomAgents,
+		),
+	);
+	pi.registerTool(createAgentResultTool(manager, agentActivity));
+	pi.registerTool(createAgentSteerTool(manager));
 
 	// ── Lifecycle ──────────────────────────────────────────────────────────────
-	pi.on("session_start", (_event, ctx) => {
+	pi.on("session_start", () => {
 		manager.clearCompleted();
 		agentActivity.clear();
-
-		// Refresh model list from live registry
-		const newList = listAvailable(ctx.modelRegistry);
-		if (newList.join(",") !== currentModelList.join(",")) {
-			currentModelList = newList;
-			// Re-register tools with fresh description — registerTool replaces by name.
-			registerTools();
-		}
 	});
 
 	pi.on("turn_start", (_event, ctx) => {
