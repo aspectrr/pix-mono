@@ -1,48 +1,6 @@
-import { spawn } from "node:child_process";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { type ConfirmUI, confirmOverlay } from "@xynogen/pix-pretty/confirm";
 import { openProgress, type ProgressHandle, type ProgressUI } from "@xynogen/pix-pretty/progress";
-
-// Delay before the relaunched process execs `pi`. The old process must fully
-// exit and release the tty first, or the two fight over stdin and the new TUI
-// draws over a half-torn-down old one. ~800ms is enough on a normal terminal.
-const RELAUNCH_DELAY_MS = 800;
-
-/**
- * Spawn a fresh, detached `pi` in the SAME terminal, then let the caller quit.
- *
- * How it survives the parent exiting:
- *  - `detached: true` puts the child in its own process group, so it is not
- *    killed when the old Pi process exits.
- *  - `stdio: "inherit"` hands the child the same tty (stdin/stdout/stderr), so
- *    the new session appears right where the old one was.
- *  - `.unref()` lets the parent exit immediately without waiting on the child.
- *
- * The child runs `sh -c 'sleep <delay>; exec pi'` so it waits for the old
- * process to release the tty before taking it over. `exec` replaces the shell
- * with `pi`, so no stray `sh` lingers.
- *
- * Returns false when relaunch can't be attempted (no tty / spawn failed) so the
- * caller can fall back to a plain quit + relaunch hint.
- */
-function relaunchPi(ctx: ExtensionCommandContext): boolean {
-	// Only relaunch when attached to an interactive terminal. Under pipes/CI the
-	// inherited stdio isn't a usable TUI, so a plain quit is the safe outcome.
-	if (!ctx.hasUI || !process.stdout.isTTY) return false;
-	try {
-		const delaySec = (RELAUNCH_DELAY_MS / 1000).toFixed(2);
-		const child = spawn("/bin/sh", ["-c", `sleep ${delaySec}; exec pi`], {
-			detached: true,
-			stdio: "inherit",
-			cwd: process.cwd(),
-			env: process.env,
-		});
-		child.unref();
-		return true;
-	} catch {
-		return false;
-	}
-}
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
@@ -308,16 +266,9 @@ async function updateAll(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 	} finally {
 		progress?.close();
 	}
-	// Updates land on disk but need a fresh process to load. Spawn a detached
-	// `pi` that waits for this process to release the tty, then quit so it takes
-	// over the same terminal. shutdown() defers until the session is idle.
-	const relaunching = relaunchPi(ctx);
-	ctx.ui.notify(
-		relaunching
-			? "Update complete. Relaunching Pi…"
-			: "Update complete. Closing Pi — relaunch to apply.",
-		"warning",
-	);
+	// Updates land on disk but need a fresh process to load. Quit so the
+	// next launch picks up new Pi + extensions; shutdown defers until idle.
+	ctx.ui.notify("Update complete. Closing Pi — relaunch to apply.", "warning");
 	(ctx as ExtensionCommandContext & { shutdown?: () => void }).shutdown?.();
 }
 
