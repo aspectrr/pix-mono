@@ -317,10 +317,13 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.INFO,
 		label: "Agent Info",
-		description: "List available agent types or models on demand.",
+		description:
+			'Discover runtime agent capabilities. Set kind to exactly "types" for agent roles/tool belts or "models" for authenticated models and metadata.',
 		parameters: Type.Object({
-			kind: Type.Union([Type.Literal("types"), Type.Literal("models")], {
-				description: "Information to list.",
+			kind: Type.Enum(["types", "models"] as const, {
+				type: "string",
+				description:
+					'Required string. Enter exactly "types" to list agent roles/tools or "models" to list available models.',
 			}),
 			query: Type.Optional(Type.String({ description: "Optional text filter." })),
 			limit: Type.Optional(

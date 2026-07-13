@@ -5,6 +5,7 @@ import type { ModelRegistry } from "../src/model-resolver.ts";
 import {
 	agentTypeGuidance,
 	buildAgentToolDescription,
+	createAgentInfoTool,
 	describeParentModel,
 	fmtTokenCount,
 	formatAgentCall,
@@ -27,6 +28,19 @@ test("agent description delegates volatile catalogs to agent_info", () => {
 	expect(description).not.toContain("Custom agents:");
 	expect(description).not.toContain("Types:");
 	expect(description.length).toBeLessThan(200);
+});
+
+test("agent_info exposes kind as a string enum with actionable guidance", () => {
+	const tool = createAgentInfoTool(() => {});
+	const parameters = tool.parameters as {
+		properties: { kind: { type?: string; enum?: string[]; description?: string } };
+	};
+	const kind = parameters.properties.kind;
+
+	expect(kind.type).toBe("string");
+	expect(kind.enum).toEqual(["types", "models"]);
+	expect(kind.description).toContain('exactly "types"');
+	expect(kind.description).toContain('"models"');
 });
 
 test("agent type discovery explains dynamic custom-agent locations", () => {
