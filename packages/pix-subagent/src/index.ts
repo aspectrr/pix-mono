@@ -131,7 +131,14 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 						display: true,
 						details,
 					},
-					{ deliverAs: "followUp", triggerTurn: true },
+					// A background agent completes asynchronously, usually while the
+					// parent is idle. "followUp" parks the notification in the follow-up
+					// queue and only flushes it on the NEXT user prompt — so the result
+					// appears to "only show up after you poke it with a chat". "steer"
+					// delivers at the next tool-call boundary while streaming, and
+					// triggerTurn fires an immediate turn when idle, so the notification
+					// surfaces consistently in both cases (cf. the file-trigger example).
+					{ deliverAs: "steer", triggerTurn: true },
 				);
 			});
 
