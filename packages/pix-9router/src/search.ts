@@ -138,7 +138,8 @@ export default function registerSearch(pi: ExtensionAPI): void {
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
 			search_type: StringEnum(["web", "news"] as const, {
-				description: "web or news search",
+				description:
+					'Required choice. Enter exactly "web" for general web results or "news" for recent news articles.',
 			}),
 			max_results: Type.Optional(
 				Type.Number({

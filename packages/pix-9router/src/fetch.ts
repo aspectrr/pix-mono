@@ -118,7 +118,8 @@ export default function registerFetch(pi: ExtensionAPI): void {
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch" }),
 			format: StringEnum(["markdown", "text", "html"] as const, {
-				description: "Desired output format",
+				description:
+					'Required choice. Enter exactly "markdown" for readable Markdown, "text" for plain text, or "html" for raw HTML.',
 			}),
 			max_characters: Type.Optional(
 				Type.Number({

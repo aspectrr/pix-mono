@@ -317,13 +317,11 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.INFO,
 		label: "Agent Info",
-		description:
-			'Discover runtime agent capabilities. Set kind to exactly "types" for agent roles/tool belts or "models" for authenticated models and metadata.',
+		description: "List runtime agent types or available models.",
 		parameters: Type.Object({
 			kind: Type.Enum(["types", "models"] as const, {
 				type: "string",
-				description:
-					'Required string. Enter exactly "types" to list agent roles/tools or "models" to list available models.',
+				description: 'Catalog: "types" = roles/tools; "models" = available models.',
 			}),
 			query: Type.Optional(Type.String({ description: "Optional text filter." })),
 			limit: Type.Optional(
@@ -382,7 +380,13 @@ export function createAgentTool(
 			allowed_tools: Type.Optional(
 				Type.Array(Type.String(), { description: "General-purpose tool restriction." }),
 			),
-			thinking: Type.Optional(Type.String({ description: "Thinking level." })),
+			thinking: Type.Optional(
+				Type.Enum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, {
+					type: "string",
+					description:
+						'Reasoning effort. Enter exactly one of: "off", "minimal", "low", "medium", "high", or "xhigh".',
+				}),
+			),
 			turns: Type.Optional(
 				Type.Number({ description: "Maximum turns; omit for unlimited.", minimum: 1 }),
 			),
@@ -897,9 +901,10 @@ export function createAgentSteerTool(manager: AgentManager) {
 		parameters: Type.Object({
 			agent_id: Type.String({ description: "The agent ID to steer or stop." }),
 			action: Type.Optional(
-				Type.Union([Type.Literal("steer"), Type.Literal("stop")], {
+				Type.Enum(["steer", "stop"] as const, {
+					type: "string",
 					description:
-						"'steer' (default) to redirect the agent with a message. 'stop' to force-kill the agent immediately.",
+						'Required choice when provided. Enter exactly "steer" (default) to redirect with a message or "stop" to force-kill immediately.',
 					default: "steer",
 				}),
 			),

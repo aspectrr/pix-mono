@@ -6,6 +6,8 @@ import {
 	agentTypeGuidance,
 	buildAgentToolDescription,
 	createAgentInfoTool,
+	createAgentSteerTool,
+	createAgentTool,
 	describeParentModel,
 	fmtTokenCount,
 	formatAgentCall,
@@ -39,8 +41,33 @@ test("agent_info exposes kind as a string enum with actionable guidance", () => 
 
 	expect(kind.type).toBe("string");
 	expect(kind.enum).toEqual(["types", "models"]);
-	expect(kind.description).toContain('exactly "types"');
-	expect(kind.description).toContain('"models"');
+	expect(kind.description).toBe('Catalog: "types" = roles/tools; "models" = available models.');
+});
+
+test("agent exposes thinking as a guided string enum", () => {
+	const tool = createAgentTool({} as never, {} as never, new Map(), () => {});
+	const parameters = tool.parameters as {
+		properties: { thinking: { type?: string; enum?: string[]; description?: string } };
+	};
+	const thinking = parameters.properties.thinking;
+
+	expect(thinking?.type).toBe("string");
+	expect(thinking?.enum).toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
+	expect(thinking?.description).toContain('exactly one of: "off"');
+	expect(thinking?.description).toContain('"xhigh"');
+});
+
+test("agent_steer exposes action as a guided string enum", () => {
+	const tool = createAgentSteerTool({} as never);
+	const parameters = tool.parameters as {
+		properties: { action: { type?: string; enum?: string[]; description?: string } };
+	};
+	const action = parameters.properties.action;
+
+	expect(action?.type).toBe("string");
+	expect(action?.enum).toEqual(["steer", "stop"]);
+	expect(action?.description).toContain('exactly "steer"');
+	expect(action?.description).toContain('"stop"');
 });
 
 test("agent type discovery explains dynamic custom-agent locations", () => {

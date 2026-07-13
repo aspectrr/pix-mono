@@ -178,16 +178,11 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				"Call `todo(action:'list')` to recover your place after long runs or context compaction.",
 			],
 			parameters: Type.Object({
-				action: Type.Union(
-					[
-						Type.Literal("list"),
-						Type.Literal("set"),
-						Type.Literal("add"),
-						Type.Literal("update"),
-						Type.Literal("clear"),
-					],
-					{ description: "Operation to perform" },
-				),
+				action: Type.Enum(["list", "set", "add", "update", "clear"] as const, {
+					type: "string",
+					description:
+						'Required operation: "list" shows items; "set" replaces all from items; "add" appends items; "update" changes one item by id; "clear" removes all.',
+				}),
 				items: Type.Optional(
 					Type.String({
 						description: "For set/add: newline-separated or numbered list of todo texts.",
@@ -195,15 +190,11 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				),
 				id: Type.Optional(Type.Number({ description: "For update: target todo id." })),
 				status: Type.Optional(
-					Type.Union(
-						[
-							Type.Literal("pending"),
-							Type.Literal("in_progress"),
-							Type.Literal("done"),
-							Type.Literal("blocked"),
-						],
-						{ description: "For update: new status." },
-					),
+					Type.Enum(["pending", "in_progress", "done", "blocked"] as const, {
+						type: "string",
+						description:
+							'For update: "pending" = not started; "in_progress" = active; "done" = finished; "blocked" = cannot proceed.',
+					}),
 				),
 				text: Type.Optional(
 					Type.String({

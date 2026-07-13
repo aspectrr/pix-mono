@@ -26,6 +26,7 @@ function makeHost(
 		data?: unknown;
 	}> = [],
 ) {
+	let capturedParameters: unknown;
 	let capturedExecute:
 		| ((
 				id: string,
@@ -50,9 +51,11 @@ function makeHost(
 	const pi = {
 		registerTool(def: {
 			name: string;
+			parameters: unknown;
 			execute: typeof capturedExecute;
 			renderResult?: typeof capturedRender;
 		}) {
+			capturedParameters = def.parameters;
 			capturedExecute = def.execute;
 			if (def.renderResult) capturedRender = def.renderResult;
 		},
@@ -82,6 +85,10 @@ function makeHost(
 	return {
 		pi,
 		sessionManager,
+		get parameters() {
+			if (!capturedParameters) throw new Error("parameters not captured");
+			return capturedParameters;
+		},
 		get execute() {
 			if (!capturedExecute) throw new Error("execute not captured");
 			return capturedExecute;
@@ -118,6 +125,30 @@ async function run(
 function text(result: { content: Array<{ type: string; text: string }> }) {
 	return result.content.map((c) => c.text).join("\n");
 }
+
+// ─── Tool schema ────────────────────────────────────────────────────────────
+
+test("todo exposes action and status as guided string enums", () => {
+	const host = makeHost();
+	registerTodo(host.pi);
+	const schema = host.parameters as {
+		properties: {
+			action: { type?: string; enum?: string[]; description?: string };
+			status: { type?: string; enum?: string[]; description?: string };
+		};
+	};
+	const action = schema.properties.action;
+	const status = schema.properties.status;
+
+	expect(action.type).toBe("string");
+	expect(action.enum).toEqual(["list", "set", "add", "update", "clear"]);
+	expect(action.description).toContain('"list" shows items');
+	expect(action.description).toContain('"update" changes one item by id');
+	expect(status?.type).toBe("string");
+	expect(status?.enum).toEqual(["pending", "in_progress", "done", "blocked"]);
+	expect(status?.description).toContain('"pending" = not started');
+	expect(status?.description).toContain('"blocked" = cannot proceed');
+});
 
 // ─── parseItems (via set/add) ───────────────────────────────────────────────
 
